@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Food on Wheels – Administración</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+<section class="login" id="login">
+  <form id="formLogin" class="tarjeta-login">
+    <svg class="rueda grande" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="M12 3v7M12 14v7M3 12h7M14 12h7M5.6 5.6l5 5M13.4 13.4l5 5M18.4 5.6l-5 5M10.6 13.4l-5 5"/></svg>
+    <h1>Food on Wheels</h1>
+    <p>Panel de administración</p>
+    <label>Correo<input name="correo" type="email" required autocomplete="username"></label>
+    <label>Contraseña<input name="clave" type="password" required autocomplete="current-password"></label>
+    <p class="error" id="errLogin" role="alert"></p>
+    <button class="btn" type="submit">Entrar</button>
+      </form>
+</section>
+
+<div id="app" hidden>
+  <aside class="lateral" id="lateral">
+    <a class="marca" href="#inicio"><svg class="rueda" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="M12 3v7M12 14v7M3 12h7M14 12h7M5.6 5.6l5 5M13.4 13.4l5 5M18.4 5.6l-5 5M10.6 13.4l-5 5"/></svg><span>FoW<small>Food on Wheels</small></span></a>
+    <nav id="nav"></nav>
+    <p class="lema">Buena comida,<br>mejores momentos</p>
+  </aside>
+  <div class="velo" id="veloLat" hidden></div>
+  <div class="cuerpo">
+    <header class="barra">
+      <button class="icono menu-btn" id="btnMenu" type="button" aria-label="Menú">☰</button>
+      <input type="search" id="buscar" placeholder="Buscar pedidos, productos, clientes…">
+      <a class="icono campana" href="#pedidos" aria-label="Pedidos pendientes">🔔<b id="campana">0</b></a>
+      <div class="usuario"><span class="avatar">A</span><div><b>Admin</b><small>Administradora</small></div></div>
+    </header>
+    <main id="vista" class="vista"></main>
+  </div>
+</div>
+<dialog id="dlg"><form id="formDlg" class="form"></form></dialog>
+<div class="aviso" id="aviso" role="status" aria-live="polite"></div>
+<script type="module" src="js/admin.js"></script>
+</body>
+</html>

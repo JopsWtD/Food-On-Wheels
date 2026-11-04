@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FoW – Food on Wheels</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/cliente.css">
+</head>
+<body>
+<div class="splash" id="splash"><span>🛵</span><b>Food on Wheels</b></div>
+
+<header class="top">
+  <a href="#inicio" class="logo">FoW</a>
+  <button class="dir" id="btnDir" type="button" title="Dirección de entrega">📍 ¿Dónde te lo llevamos?</button>
+  <label class="buscador">
+    <span class="sr">Buscar</span>
+    <input type="search" id="buscar" placeholder="Busca platos o cocina…">
+  </label>
+  <button class="btn-icono" id="btnCuenta" type="button" aria-label="Mi cuenta">👤</button>
+  <button class="btn-icono" id="btnPedidos" type="button" aria-label="Mis pedidos">🧾<span class="burbuja" id="contPedidos" hidden>0</span></button>
+  <button class="btn-icono" id="btnCarrito" type="button" aria-label="Abrir carrito">🛒<span class="burbuja" id="contador">0</span></button>
+</header>
+
+<main id="inicio">
+  <section class="hero">
+    <div class="hero-texto">
+      <p class="hero-etiqueta" id="hEtiqueta">Cocina colombiana</p>
+      <h1 id="hTitulo">Un pedacito de Colombia en cada bocado.</h1>
+      <p id="hTexto">Sabores que saben a casa. Elige tus favoritos y pide para recoger o recibir en tu puerta.</p>
+      <a class="btn btn-naranja" href="#menu" id="hBoton">Explorar el menú</a>
+    </div>
+    <div class="hero-plato" id="hPlato" aria-hidden="true"><span id="hEmoji">🍛</span><span class="sello">🛵 Envío rápido y seguro</span></div>
+  </section>
+
+  <section class="promos" id="promos" aria-labelledby="t-promos">
+    <h2 id="t-promos">Promociones</h2>
+    <div class="promos-lista" id="listaPromos"></div>
+  </section>
+
+  <section class="menu" id="menu" aria-labelledby="t-menu">
+    <div class="menu-cab">
+      <div>
+        <p class="etiqueta-naranja">Para antojarse</p>
+        <h2 id="t-menu">Nuestro menú</h2>
+      </div>
+      <p class="menu-info" id="infoResultados"></p>
+    </div>
+    <nav class="categorias" id="categorias" aria-label="Categorías"></nav>
+    <div class="grilla" id="grilla"></div>
+  </section>
+
+  <section class="prime" id="prime">
+    <span class="prime-corona" aria-hidden="true">👑</span>
+    <div>
+      <h2>FoW Prime</h2>
+      <p>Tendrás un 25% de descuento en compras con tu membresía.</p>
+    </div>
+    <button class="btn btn-blanco" id="btnPrime" type="button">Quiero mi membresía</button>
+  </section>
+</main>
+
+<nav class="nav-movil" aria-label="Navegación principal">
+  <a href="#inicio" class="activo">🏠<span>Inicio</span></a>
+  <a href="#menu">🔍<span>Menú</span></a>
+  <button type="button" id="btnPedidos2">🧾<span>Pedidos</span></button>
+  <button type="button" id="btnCuenta2">👤<span>Cuenta</span></button>
+</nav>
+
+<!-- Carrito -->
+<div class="velo" id="velo" hidden></div>
+<aside class="carrito" id="carrito" aria-label="Tu pedido" aria-hidden="true">
+  <header class="carrito-cab">
+    <h2>Tu pedido</h2>
+    <button class="btn-icono" id="cerrarCarrito" type="button" aria-label="Cerrar carrito">✕</button>
+  </header>
+  <div class="carrito-items" id="itemsCarrito"></div>
+  <footer class="carrito-pie">
+    <dl class="totales">
+      <div><dt>Subtotal</dt><dd id="tSub">$0</dd></div>
+      <div id="filaPrime" hidden><dt>Descuento Prime (25%)</dt><dd id="tPrime">$0</dd></div>
+      <div class="total"><dt>Total estimado</dt><dd id="tTotal">$0</dd></div>
+    </dl>
+    <button class="btn btn-naranja btn-ancho" id="btnContinuar" type="button">Continuar</button>
+  </footer>
+</aside>
+
+<!-- Estado de mis pedidos -->
+<aside class="carrito" id="panelPedidos" aria-label="Mis pedidos" aria-hidden="true">
+  <header class="carrito-cab"><h2>Mis pedidos</h2><button class="btn-icono" id="cerrarPedidos" type="button" aria-label="Cerrar">✕</button></header>
+  <div class="carrito-items" id="listaPedidos"></div>
+</aside>
+
+<!-- Iniciar sesión -->
+<dialog id="dlgLogin">
+  <form id="formLogin" class="form">
+    <h2>Inicia sesión</h2>
+    <p class="nota" id="msgLogin">Entra con tu cuenta para pedir y ver tus datos.</p>
+    <label>Correo electrónico<input name="correo" type="email" required autocomplete="email" placeholder="maria@correo.com"></label>
+    <label>Contraseña<input name="clave" type="password" required autocomplete="current-password"></label>
+    <p class="error" id="errLogin" role="alert"></p>
+    <div class="acciones">
+      <button class="btn btn-gris" type="button" data-cerrar>Cancelar</button>
+      <button class="btn btn-verde" type="submit">Entrar</button>
+    </div>
+    <p class="nota">¿Aún no tienes cuenta? <button class="enlace" type="button" data-ir="dlgRegistro">Crear cuenta</button></p>
+  </form>
+</dialog>
+
+<!-- Crear cuenta -->
+<dialog id="dlgRegistro">
+  <form id="formRegistro" class="form">
+    <h2>Únete a la mesa</h2>
+    <p class="nota">Crea tu cuenta para poder pedir y guardar tus datos.</p>
+    <label>Nombre completo<input name="nombre" required placeholder="Ej. María López"></label>
+    <label>Teléfono<input name="telefono" type="tel" required pattern="[0-9 ]{7,15}" placeholder="Ej. 300 123 4567"></label>
+    <label>Correo electrónico<input name="correo" type="email" required autocomplete="email" placeholder="maria@correo.com"></label>
+    <label>Contraseña (mínimo 6 caracteres)<input name="clave" type="password" required minlength="6" autocomplete="new-password"></label>
+    <p class="error" id="errRegistro" role="alert"></p>
+    <div class="acciones">
+      <button class="btn btn-gris" type="button" data-cerrar>Cancelar</button>
+      <button class="btn btn-verde" type="submit">Crear cuenta</button>
+    </div>
+    <p class="nota">¿Ya tienes cuenta? <button class="enlace" type="button" data-ir="dlgLogin">Inicia sesión</button></p>
+  </form>
+</dialog>
+
+<!-- Perfil -->
+<dialog id="dlgPerfil">
+  <form id="formPerfil" class="form">
+    <div class="perfil-cab">
+      <span class="avatar" id="avatar" aria-hidden="true"></span>
+      <div><h2>Mi perfil</h2><p class="insignia" id="estadoPrime"></p></div>
+      <button class="btn-icono" type="button" data-cerrar aria-label="Cerrar">✕</button>
+    </div>
+    <label>Nombre completo<input name="nombre" required></label>
+    <label>Teléfono<input name="telefono" type="tel" required pattern="[0-9 ]{7,15}"></label>
+    <label>Correo electrónico<input name="correo" type="email" readonly></label>
+    <label>Dirección habitual<input name="direccion" placeholder="Calle 72 # 12-34, Apto 201"></label>
+    <label>Nueva contraseña (opcional)<input name="clave" type="password" minlength="6" autocomplete="new-password"></label>
+    <p class="error" id="errPerfil" role="alert"></p>
+    <div class="acciones">
+      <button class="btn btn-gris" type="button" id="btnSalir">Cerrar sesión</button>
+      <button class="btn btn-verde" type="submit">Guardar cambios</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Datos del pedido -->
+<dialog id="dlgPedido">
+  <form method="dialog" id="formPedido" class="form">
+    <h2>Tus datos</h2>
+    <label>Nombre completo<input name="nombre" required></label>
+    <label>Teléfono<input name="telefono" type="tel" required></label>
+    <label>¿Cómo lo quieres recibir?
+      <select name="entrega" id="selEntrega">
+        <option value="domicilio">Entrega a domicilio</option>
+        <option value="recoger">Recoger en el local</option>
+      </select>
+    </label>
+    <label id="lblDireccion">Dirección de entrega<input name="direccion" placeholder="Calle 72 # 12-34, Apto 201"></label>
+    <label>Indicaciones adicionales (opcional)<input name="notas" placeholder="Ej. Llamar al portero"></label>
+    <p class="nota">Esta es una solicitud de pedido, no una confirmación. Nos pondremos en contacto contigo para coordinar los detalles.</p>
+    <div class="acciones">
+      <button class="btn btn-gris" type="button" data-cerrar>Volver</button>
+      <button class="btn btn-verde" type="submit">Enviar solicitud de pedido</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Compra de Prime -->
+<dialog id="dlgPrime">
+  <form id="formPrime" class="form">
+    <h2>Compra tu FoW Prime 👑</h2>
+    <p class="nota">25% de descuento en todas tus compras mientras dure tu membresía.</p>
+    <label>Plan<select name="plan"><option value="mensual">Mensual – $19.900</option><option value="trimestral">Trimestral – $49.900</option><option value="anual">Anual – $179.900</option></select></label>
+    <label>Método de pago<select name="metodo"><option value="tarjeta">Tarjeta crédito / débito</option><option value="nequi">Nequi</option><option value="daviplata">Daviplata</option></select></label>
+    <div class="campos" id="camposTarjeta">
+      <label>Nombre en la tarjeta<input name="titular" autocomplete="cc-name"></label>
+      <label>Número de tarjeta<input name="numero" inputmode="numeric" pattern="[0-9 ]{15,19}" autocomplete="cc-number" placeholder="0000 0000 0000 0000"></label>
+      <div class="par"><label>Vence (MM/AA)<input name="vence" pattern="(0[1-9]|1[0-2])/[0-9]{2}" placeholder="08/29" autocomplete="cc-exp"></label><label>CVV<input name="cvv" inputmode="numeric" pattern="[0-9]{3,4}" autocomplete="cc-csc"></label></div>
+    </div>
+    <div class="campos" id="camposBilletera" hidden><label>Celular de la cuenta<input name="celular" type="tel" pattern="[0-9 ]{10,13}" placeholder="300 123 4567"></label></div>
+    <p class="total-prime">Total a pagar: <b id="resumenPrime"></b></p>
+    <p class="nota">Pago de demostración: no se cobra nada ni se guarda ningún dato de tu tarjeta.</p>
+    <div class="acciones"><button class="btn btn-gris" type="button" data-cerrar>Cancelar</button><button class="btn btn-verde" type="submit">Pagar y activar</button></div>
+  </form>
+</dialog>
+
+<!-- Ventana para cancelar un pedido o reportar un problema -->
+<dialog id="dlgGen"><form id="formGen" class="form"></form></dialog>
+
+<div class="aviso" id="aviso" role="status" aria-live="polite"></div>
+
+
+<script type="module" src="js/cliente.js"></script>
+</body>
+</html>

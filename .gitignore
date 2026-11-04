@@ -1,0 +1,14 @@
+# Configuración de Firebase de cada persona (ver shared/firebase-config.example.js)
+shared/firebase-config.js
+
+# Archivos que genera la CLI de Firebase (si más adelante usan Hosting)
+.firebase/
+firebase-debug.log
+firestore-debug.log
+
+# Dependencias, por si en algún momento se usa npm
+node_modules/
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
