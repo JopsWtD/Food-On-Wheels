@@ -11,7 +11,9 @@ shared/                  código común a cliente y admin
 ├── util.js              utilidades de interfaz: escape de HTML, formato de dinero y fechas, imágenes
 ├── dominio.js           reglas de negocio puras: estados del pedido, precios, totales, reclamos
 ├── catalogo.js          catálogo en vivo: productos, combos, categorías, inventario, tienda, stock
-└── pedidos.js           crear pedidos con número consecutivo y generar la factura imprimible
+├── pedidos.js           crear pedidos con número consecutivo y generar la factura imprimible
+├── chat.js              ventana de chat cliente ↔ restaurante (un chat por pedido), común a las dos interfaces
+└── chat.css             estilos de la ventana de chat
 
 cliente/js/
 ├── app.js               punto de entrada: arranca los módulos y escucha el catálogo
@@ -21,17 +23,18 @@ cliente/js/
 ├── detalle.js           hoja de detalle del producto (cantidad y nota para la cocina)
 ├── carrito.js           carrito y envío del pedido
 ├── pedidos.js           mis pedidos: seguimiento, cancelar, reclamar, volver a pedir, factura
-└── cuenta.js            sesión, registro, perfil y FoW Prime
+├── cuenta.js            sesión, registro, perfil y FoW Prime
+└── chat.js              chat con el restaurante desde «Mis pedidos»: no leídos y avisos
 
 admin/js/
 ├── app.js               núcleo: sesión, datos en vivo, navegación y reparto de eventos
 ├── estado.js            estado compartido del panel
 ├── ui.js                piezas de interfaz (tablas, indicadores, editor, imágenes)
 ├── servicios.js         operaciones delicadas: cambio de estado, productos, migraciones
-└── vistas/              una sección por archivo (pedidos, productos, combos, categorías…)
+└── vistas/              una sección por archivo (pedidos, chats, productos, combos, categorías…)
 ```
 
-**Agregar una sección al admin:** crea `admin/js/vistas/mi-seccion.js` exportando `{ id, icono, titulo, render(), acciones }`, impórtala en `admin/js/app.js` y agrégala a `VISTAS`. Cada botón con `data-a="nombre"` ejecuta `acciones.nombre(dataset, boton)` de la sección activa.
+**Agregar una sección al admin:** crea `admin/js/vistas/mi-seccion.js` exportando `{ id, icono, titulo, render(), acciones }`, impórtala en `admin/js/app.js` y agrégala al grupo del menú que corresponda en `GRUPOS` («Atención al cliente» o «Administración del restaurante»). Cada botón con `data-a="nombre"` ejecuta `acciones.nombre(dataset, boton)` de la sección activa.
 
 ## Configurar Firebase (una sola vez)
 1. Crea un proyecto en https://console.firebase.google.com (plan Spark, gratis).
@@ -57,6 +60,8 @@ Abre la carpeta en VS Code y usa Live Server (los archivos son módulos: no func
 | `pedidos/{n}` | pedidos con estado, hora de cada estado, notas por producto y envío |
 | `contadores/pedidos` | último número de pedido (#FOW-0001…) |
 | `reclamos/{n}` | reclamos con foto; el cliente elige reembolso o reenvío |
+| `chats/{n}` | portada del chat del pedido `n`: cliente, último mensaje y no leídos de cada lado |
+| `chats/{n}/mensajes` | mensajes del chat (texto, quién lo envió y hora del servidor) |
 | `stats/popularidad` | unidades entregadas por producto («Los más pedidos») |
 | `config/tienda` | datos del negocio, costo del domicilio y % de Prime |
 | `eventos/{id}` | descuentos (% a un producto o a una categoría), encendidos a mano y con fechas opcionales |
@@ -71,6 +76,7 @@ Abre la carpeta en VS Code y usa Live Server (los archivos son módulos: no func
 - **Combos:** se arman con productos y cantidades, tienen precio fijo y se agotan cuando alguno de sus productos no alcanza.
 - **Eventos:** son la única forma de dar descuento. Aplican un % a un producto o a una categoría; si varios aplican al mismo producto, gana el mayor. Funcionan si están encendidos y, si tienen fechas, solo dentro del rango (se activan y apagan solos, sin recargar). FoW Prime es una regla global (Configuración) que se aplica sobre el subtotal, además de los eventos.
 - **Reclamos:** hasta 24 horas después de la entrega, con foto. El reembolso se registra; el dinero se devuelve a mano.
+- **Chat:** cada pedido tiene su propio chat entre el cliente y el restaurante. El cliente lo abre desde la tarjeta del pedido en «Mis pedidos». Apenas escribe, la conversación aparece en la sección **Chats → En curso** del admin (con el nombre del cliente, el código del pedido, el último mensaje y los no leídos) y sale un aviso que se toca para abrirla. Solo texto, hasta 500 caracteres por mensaje. Mientras el pedido está en curso se puede escribir; cuando se marca **entregado** o **cancelado** el chat se cierra solo (las reglas de Firestore rechazan mensajes nuevos), pasa a **Cerrados** y el historial queda en solo lectura.
 - **Facturas:** dos subsecciones en el admin. *Pedidos*: una por pedido entregado (FAC-0001…). *Suscripciones*: una por cada compra de FoW Prime (SUS-0001…). Todas se imprimen o guardan como PDF; el cliente ve las suyas en «Mis pedidos» y en su perfil.
 - **Clientes:** no se eliminan, se bloquean (así sus pedidos y facturas conservan a su dueño). Si una cuenta quedó sin datos por la antigua opción «Eliminar», al iniciar sesión se recupera y se le pide completar su perfil.
 - **Escalabilidad:** el admin carga solo los pedidos de los últimos 60 días (ampliable desde Facturas) para no agotar las lecturas del plan Spark.

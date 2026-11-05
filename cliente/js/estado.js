@@ -8,6 +8,7 @@ export const S = {
   cliente: null,        // datos de usuarios/{uid} o null si es visitante
   carrito: [],          // [{ id, cant, nota }]
   pedidos: [], reclamos: {},
+  chats: {},            // chats/{pedidoId} de mis pedidos: { ultimo, sinLeerCliente, … }
   catalogoListo: false,
   texto: "",            // búsqueda
   vista: { tipo: "inicio", cat: null } // "inicio" (secciones) o "categoria" (ver todo)

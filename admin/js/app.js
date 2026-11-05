@@ -12,6 +12,7 @@ import { prepararDatos } from "./servicios.js";
 import inicio from "./vistas/inicio.js";
 import pedidos from "./vistas/pedidos.js";
 import reclamos from "./vistas/reclamos.js";
+import chats, { escucharChats, reiniciarChats } from "./vistas/chats.js";
 import ventas from "./vistas/ventas.js";
 import facturas from "./vistas/facturas.js";
 import productos from "./vistas/productos.js";
@@ -23,7 +24,12 @@ import apariencia from "./vistas/apariencia.js";
 import eventos from "./vistas/eventos.js";
 import config from "./vistas/config.js";
 
-const VISTAS = [inicio, pedidos, reclamos, ventas, facturas, productos, combos, categorias, eventos, inventario, clientes, apariencia, config];
+// El menú se agrupa en dos secciones; Inicio (el resumen general) va arriba, fuera de los grupos.
+const GRUPOS = [
+  { titulo: "Atención al cliente", vistas: [pedidos, chats, reclamos, clientes] },
+  { titulo: "Administración del restaurante", vistas: [ventas, facturas, productos, combos, categorias, eventos, inventario, apariencia, config] }
+];
+const VISTAS = [inicio, ...GRUPOS.flatMap((g) => g.vistas)];
 const vistaActual = () => VISTAS.find((v) => v.id === location.hash.slice(1)) || inicio;
 
 /* ===== RENDER ===== */
@@ -31,7 +37,9 @@ function render() {
   if ($("#app").hidden) return;
   const v = vistaActual();
   $("#vista").innerHTML = v.render();
-  $("#nav").innerHTML = VISTAS.map((x) => { const n = x.contador?.() || 0; return `<a href="#${x.id}" class="${x === v ? "activo" : ""}">${x.icono}<span>${x.titulo}</span>${n ? `<b class="cuenta">${n}</b>` : ""}</a>`; }).join("");
+  const enlace = (x) => { const n = x.contador?.() || 0; return `<a href="#${x.id}" class="${x === v ? "activo" : ""}"${x === v ? ' aria-current="page"' : ""}>${x.icono}<span>${x.titulo}</span>${n ? `<b class="cuenta">${n}</b>` : ""}</a>`; };
+  $("#nav").innerHTML = enlace(inicio) + GRUPOS.map((g) => `<div class="nav-grupo" role="group" aria-label="${g.titulo}"><p>${g.titulo}</p>${g.vistas.map(enlace).join("")}</div>`).join("");
+  $("#btnMenu").classList.toggle("con-chats", chats.contador() > 0); // en el celular el menú está oculto: punto si hay chats sin leer
   const pend = pedidos.contador();
   $("#campana").textContent = pend; $("#campana").hidden = !pend;
   abrirLateral(false);
@@ -95,6 +103,8 @@ function iniciarEscuchas() {
     if (!recIniciales && s.docChanges().some((c) => c.type === "added")) aviso("Llegó un reclamo nuevo");
     if (!s.metadata.fromCache) recIniciales = false;
   });
+  // Chats con clientes (solo la portada; los mensajes se cargan al abrir cada chat). Se reconecta sola si falla.
+  quitar.push(escucharChats());
   escuchar(collection(db, "membresias"), (s) => { S.membresias = s.docs.map((x) => ({ _id: x.id, ...x.data() })); });
   escuchar(query(collection(db, "historial"), orderBy("f", "desc"), limit(500)), (s) => { S.historial = s.docs.map((x) => x.data()); });
 }
@@ -110,7 +120,7 @@ $("#formLogin").onsubmit = async (e) => {
   btn.disabled = false; btn.textContent = "Entrar";
 };
 onAuthStateChanged(auth, async (user) => {
-  quitar.forEach((fn) => fn()); quitar = []; quitarPedidos();
+  quitar.forEach((fn) => fn()); quitar = []; quitarPedidos(); reiniciarChats();
   const mostrar = (app) => { $("#cargando").hidden = true; $("#login").hidden = app; $("#app").hidden = !app; };
   if (!user) return mostrar(false);
   let perfil; try { perfil = await getDoc(doc(db, "admins", user.uid)); } catch { perfil = null; }

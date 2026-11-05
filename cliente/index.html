@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/cliente.css">
+<link rel="stylesheet" href="../shared/chat.css">
 </head>
 <body>
 <div class="splash" id="splash"><span>🛵</span><b>Food on Wheels</b></div>
@@ -20,7 +21,7 @@
     <input type="search" id="buscar" placeholder="Busca platos o cocina…">
   </label>
   <button class="btn-icono" id="btnCuenta" type="button" aria-label="Mi cuenta">👤</button>
-  <button class="btn-icono" id="btnPedidos" type="button" aria-label="Mis pedidos">🧾<span class="burbuja" id="contPedidos" hidden>0</span></button>
+  <button class="btn-icono" id="btnPedidos" type="button" aria-label="Mis pedidos">🧾<span class="burbuja" id="contPedidos" hidden>0</span><span class="punto-chat" hidden aria-label="Tienes mensajes sin leer">💬</span></button>
   <button class="btn-icono" id="btnCarrito" type="button" aria-label="Abrir carrito">🛒<span class="burbuja" id="contador">0</span></button>
 </header>
 
@@ -65,7 +66,7 @@
 <nav class="nav-movil" aria-label="Navegación principal">
   <a href="#inicio" class="activo">🏠<span>Inicio</span></a>
   <a href="#menu">🔍<span>Menú</span></a>
-  <button type="button" id="btnPedidos2">🧾<span>Pedidos</span></button>
+  <button type="button" id="btnPedidos2">🧾<span>Pedidos</span><i class="punto-chat" hidden aria-label="Tienes mensajes sin leer"></i></button>
   <button type="button" id="btnCuenta2">👤<span>Cuenta</span></button>
 </nav>
 

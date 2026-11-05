@@ -35,7 +35,7 @@ function pintarSesion() {
 /* onAuthStateChanged se ejecuta al abrir la página (si ya había sesión) y cada vez que se entra o se sale */
 function alCambiarSesion(user) {
   quitar.forEach((fn) => fn()); quitar = [];
-  if (!user) { S.cliente = null; S.pedidos = []; S.reclamos = {}; S.carrito = leerLocal(); pintarSesion(); emitir("sesion"); emitir("carrito"); return; }
+  if (!user) { S.cliente = null; S.pedidos = []; S.reclamos = {}; S.chats = {}; S.carrito = leerLocal(); pintarSesion(); emitir("sesion"); emitir("carrito"); emitir("pedidos"); return; }
   let primera = true;
   quitar.push(onSnapshot(doc(db, "usuarios", user.uid), async (d) => { // mis datos y mi carrito, en vivo
     if (!d.exists()) { // cuenta sin datos (borrados con la antigua opción «Eliminar»): se recupera
@@ -69,6 +69,16 @@ function alCambiarSesion(user) {
   quitar.push(onSnapshot(query(collection(db, "reclamos"), where("uid", "==", user.uid)), (snap) => {
     S.reclamos = Object.fromEntries(snap.docs.map((x) => [x.data().pedidoId, x.data()])); emitir("pedidos");
   }));
+  // Chats de mis pedidos (solo la portada: último mensaje y no leídos). Los mensajes se cargan al abrir un chat.
+  // Si Firestore corta la escucha (permisos, conexión), se reintenta sola.
+  let quitarChats = () => {}, reintento;
+  const escucharChats = () => {
+    quitarChats = onSnapshot(query(collection(db, "chats"), where("uid", "==", user.uid)), (snap) => {
+      S.chats = Object.fromEntries(snap.docs.map((x) => [x.data().pedidoId, x.data()])); emitir("chats", snap); emitir("pedidos");
+    }, (err) => { console.error("chats:", err); reintento = setTimeout(escucharChats, 5000); });
+  };
+  escucharChats();
+  quitar.push(() => { quitarChats(); clearTimeout(reintento); });
 }
 
 // Abre la factura de la última suscripción del cliente

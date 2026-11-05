@@ -441,3 +441,11 @@ dialog.hoja{width:min(560px,100%);max-height:94vh;overflow:hidden;border-radius:
   .dir{justify-self:end;width:44px;height:44px;padding:0;justify-content:center;border-radius:50%;background:#fff;box-shadow:var(--sombra);font-size:1.1rem}
   .dir-txt{display:none}
 }
+
+/* ===== Chat con el restaurante ===== */
+.pedido-botones+.pedido-acciones{padding-top:0;border-top:0}
+.btn-mini.btn-verde .chat-cont{background:var(--naranja)}
+.punto-chat{position:absolute;bottom:-6px;right:-6px;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--verde);font-size:.7rem;box-shadow:0 0 0 2px var(--crema);animation:chat-pulso 1.8s infinite}
+.nav-movil button{position:relative}
+.nav-movil .punto-chat{top:0;bottom:auto;right:calc(50% - 20px);width:10px;height:10px;background:var(--naranja);box-shadow:0 0 0 2px #fff}
+.punto-chat[hidden]{display:none}

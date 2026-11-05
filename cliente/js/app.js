@@ -8,8 +8,9 @@ import { iniciarMenu } from "./menu.js";
 import { iniciarDetalle } from "./detalle.js";
 import { iniciarPedidos } from "./pedidos.js";
 import { iniciarCuenta } from "./cuenta.js";
+import { iniciarChat } from "./chat.js";
 
-iniciarCarrito(); iniciarMenu(); iniciarDetalle(); iniciarPedidos(); iniciarCuenta();
+iniciarCarrito(); iniciarMenu(); iniciarDetalle(); iniciarPedidos(); iniciarChat(); iniciarCuenta();
 
 // Catálogo en vivo: cualquier cambio del admin llega aquí desde Firestore, en cualquier dispositivo
 const inicio = Date.now();

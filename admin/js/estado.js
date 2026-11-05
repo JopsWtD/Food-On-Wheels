@@ -4,7 +4,7 @@ import { producto } from "../../shared/catalogo.js";
 
 export const { db, auth } = conectar("admin");
 export const S = {
-  pedidos: [], cuentas: [], membresias: [], historial: [], reclamos: [],
+  pedidos: [], cuentas: [], membresias: [], historial: [], reclamos: [], chats: [],
   busq: "", nombreAdmin: "Admin",
   diasPedidos: 60 // solo se cargan los pedidos de los últimos N días (escala mejor con muchos pedidos)
 };

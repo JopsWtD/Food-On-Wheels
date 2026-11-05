@@ -98,6 +98,57 @@ service cloud.firestore {
                     && id == string(request.resource.data.numero);
     }
 
+    // Chat cliente ↔ restaurante: uno por pedido (el id del chat es el número del pedido).
+    // Solo se escribe mientras el pedido está en curso: al entregarse o cancelarse el chat queda cerrado
+    // (se puede leer el historial, pero ya no se aceptan mensajes).
+    match /chats/{pid} {
+      function esDueno() { return logueado() && pedido(pid).uid == request.auth.uid; }
+      function chatAbierto() { return !(pedido(pid).estado in ['entregado', 'cancelado']); }
+      function nuevo() { return request.resource.data; }
+      // El último mensaje (portada) debe ser texto de 1 a 500 caracteres, con la hora del servidor,
+      // y "de" debe corresponder a quien escribe
+      function ultimoValido() {
+        let u = nuevo().ultimo;
+        return u.keys().hasOnly(['texto', 'de', 'fecha']) && u.texto is string && u.texto.size() > 0 && u.texto.size() <= 500
+            && u.fecha == request.time
+            && ((u.de == 'cliente' && esDueno()) || (u.de == 'admin' && esAdmin()));
+      }
+      // get: también funciona cuando el chat aún no existe (se comprueba con el pedido)
+      allow get: if esAdmin() || esDueno();
+      allow list: if esAdmin() || (logueado() && resource.data.uid == request.auth.uid);
+      // El primer mensaje crea la portada con los datos del pedido
+      allow create: if chatAbierto() && ultimoValido()
+                    && nuevo().keys().hasOnly(['pedidoId', 'uid', 'nombre', 'creado', 'actualizado', 'ultimo', 'sinLeerCliente', 'sinLeerAdmin'])
+                    && pid == string(nuevo().pedidoId)
+                    && nuevo().uid == pedido(pid).uid
+                    && nuevo().nombre == pedido(pid).cliente.nombre
+                    && nuevo().creado == request.time && nuevo().actualizado == request.time
+                    && nuevo().sinLeerCliente == (nuevo().ultimo.de == 'admin' ? 1 : 0)
+                    && nuevo().sinLeerAdmin == (nuevo().ultimo.de == 'cliente' ? 1 : 0);
+      allow update: if
+          // enviar un mensaje: cambia el último mensaje y suma 1 a los no leídos del otro lado
+          (chatAbierto() && ultimoValido() && nuevo().actualizado == request.time && (
+              (nuevo().ultimo.de == 'cliente' && cambia().hasOnly(['ultimo', 'actualizado', 'sinLeerAdmin']) && nuevo().sinLeerAdmin == resource.data.sinLeerAdmin + 1)
+           || (nuevo().ultimo.de == 'admin' && cambia().hasOnly(['ultimo', 'actualizado', 'sinLeerCliente']) && nuevo().sinLeerCliente == resource.data.sinLeerCliente + 1)))
+          // marcar como leído (también con el chat cerrado): cada lado solo pone en 0 su propio contador
+          || (esDueno() && cambia().hasOnly(['sinLeerCliente']) && nuevo().sinLeerCliente == 0)
+          || (esAdmin() && cambia().hasOnly(['sinLeerAdmin']) && nuevo().sinLeerAdmin == 0);
+      allow delete: if esAdmin();   // al reiniciar los datos de prueba
+
+      match /mensajes/{m} {
+        allow read: if esAdmin() || esDueno();
+        allow create: if chatAbierto()
+                      && nuevo().keys().hasOnly(['de', 'uid', 'nombre', 'texto', 'fecha'])
+                      && nuevo().uid == request.auth.uid
+                      && nuevo().texto is string && nuevo().texto.size() > 0 && nuevo().texto.size() <= 500
+                      && nuevo().nombre is string && nuevo().nombre.size() <= 80
+                      && nuevo().fecha == request.time
+                      && ((nuevo().de == 'cliente' && esDueno()) || (nuevo().de == 'admin' && esAdmin()));
+        allow update: if false;           // los mensajes no se editan
+        allow delete: if esAdmin();
+      }
+    }
+
     // Catálogo: lo ve cualquiera (también visitantes), solo el admin lo modifica.
     match /productos/{id}  { allow read: if true; allow write: if esAdmin(); }
     match /categorias/{id} { allow read: if true; allow write: if esAdmin(); }

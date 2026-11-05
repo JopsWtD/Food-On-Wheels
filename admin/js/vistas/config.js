@@ -11,6 +11,12 @@ async function borrarColecciones(nombres) { // por lotes: un writeBatch admite m
   const refs = (await Promise.all(nombres.map((n) => getDocs(collection(db, n))))).flatMap((s) => s.docs.map((d) => d.ref));
   for (let k = 0; k < refs.length; k += 450) { const b = writeBatch(db); refs.slice(k, k + 450).forEach((r) => b.delete(r)); await b.commit(); }
 }
+// Los mensajes viven en una subcolección de cada chat: se borran primero, luego la portada
+async function borrarChats() {
+  const chats = (await getDocs(collection(db, "chats"))).docs;
+  const refs = (await Promise.all(chats.map((c) => getDocs(collection(c.ref, "mensajes"))))).flatMap((s) => s.docs.map((d) => d.ref)).concat(chats.map((c) => c.ref));
+  for (let k = 0; k < refs.length; k += 450) { const b = writeBatch(db); refs.slice(k, k + 450).forEach((r) => b.delete(r)); await b.commit(); }
+}
 export default {
   id: "config", icono: "⚙️", titulo: "Configuración",
   render() {
@@ -23,7 +29,7 @@ export default {
       <div class="acciones"><button class="btn" type="submit">Guardar</button></div></form></section>
     <section class="caja"><h2>Sesión</h2><p>Sesión iniciada como <b>${esc(auth.currentUser?.email)}</b>.</p><div class="acciones"><button class="btn" data-a="salir">Cerrar sesión</button></div></section>
     <section class="caja peligro"><h2>Zona de pruebas</h2><p class="nota">Acciones para limpiar datos de prueba. No se pueden deshacer.</p><div class="acciones">
-      <button class="btn gris" data-a="reiniciar">Borrar pedidos, reclamos e historial</button>
+      <button class="btn gris" data-a="reiniciar">Borrar pedidos, reclamos, chats e historial</button>
       <button class="btn gris peli" data-a="borrarCatalogo">Eliminar todos los productos y combos</button></div></section>`;
   },
   async alEnviar(form) {
@@ -33,8 +39,9 @@ export default {
   acciones: {
     salir: () => signOut(auth),
     async reiniciar() {
-      if (!confirm("Se borrarán TODOS los pedidos, reclamos e historial, la numeración vuelve a #FOW-0001, el inventario a los valores iniciales y se reinician los «más vendidos». ¿Continuar?")) return;
+      if (!confirm("Se borrarán TODOS los pedidos, reclamos, chats e historial, la numeración vuelve a #FOW-0001, el inventario a los valores iniciales y se reinician los «más vendidos». ¿Continuar?")) return;
       try {
+        await borrarChats();
         await borrarColecciones(["pedidos", "historial", "reclamos"]);
         const b = writeBatch(db), base = inventarioBase();
         b.delete(doc(db, "contadores", "pedidos")); b.delete(doc(db, "stats", "popularidad"));

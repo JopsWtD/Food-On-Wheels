@@ -254,3 +254,47 @@ td,.det,.reclamo p,.reclamo header{overflow-wrap:anywhere}
   .tabla td[data-label]::before{max-width:45%}
   .tabla td.acc{flex-wrap:wrap}
 }
+
+/* ===== Chats con clientes ===== */
+.chats-lista{display:grid;gap:8px;margin-top:12px}
+.chat-item{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border:1px solid var(--linea);border-radius:16px;background:#fff;text-align:left;transition:border-color .2s,box-shadow .2s,transform .2s}
+.chat-item:hover{border-color:var(--verde2);box-shadow:0 8px 20px rgba(15,61,46,.12);transform:translateY(-1px)}
+.chat-item.sin-leer{border-color:var(--naranja);background:#fff8f2}
+.ci-avatar{flex:none;display:grid;place-items:center;width:46px;height:46px;border-radius:50%;background:var(--verde);color:var(--lima);font:800 1.2rem var(--t)}
+.chat-item.sin-leer .ci-avatar{background:var(--naranja);color:#fff}
+.ci-cuerpo{flex:1;min-width:0;display:grid;gap:3px}
+.ci-fila{display:flex;align-items:center;gap:8px;min-width:0}
+.ci-fila b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:1rem}
+.ci-fila time{flex:none;font-size:.75rem;color:var(--gris)}
+.ci-pedido{flex-wrap:wrap;font-size:.8rem;font-weight:700;color:var(--verde2)}
+.ci-pedido .est{padding:2px 9px;font-size:.7rem}
+.ci-cerrado{font-size:.72rem;color:var(--gris)}
+.ci-previa{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.85rem;color:var(--gris)}
+.chat-item.sin-leer .ci-previa{color:var(--tinta);font-weight:700}
+.chat-item .chat-cont{flex:none}
+.chats-lista .vacio{padding:24px;text-align:center;color:var(--gris)}
+@media(hover:none){.chat-item:hover{transform:none;box-shadow:none}}
+.chats-error{margin:0 0 12px;padding:10px 14px;border-radius:12px;background:#fde2e0;color:#b3261e;font-weight:700;font-size:.85rem}
+@keyframes llega{from{opacity:0;transform:translateY(-6px)}}
+.chat-item.sin-leer{animation:llega .35s ease-out}
+/* Aviso de mensaje nuevo (se toca para abrir el chat) */
+.avisos-chat{position:fixed;right:18px;bottom:18px;z-index:70;display:grid;gap:8px;width:min(360px,calc(100% - 24px))}
+.aviso-chat{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border:0;border-radius:16px;background:var(--verde);color:#fff;text-align:left;box-shadow:0 14px 30px rgba(15,40,30,.35);animation:llega .3s ease-out;cursor:pointer}
+.aviso-chat .ci-avatar{width:38px;height:38px;font-size:1rem;background:var(--naranja);color:#fff}
+.aviso-chat>span:nth-child(2){flex:1;min-width:0;display:grid}
+.aviso-chat b,.aviso-chat small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.aviso-chat b{font-size:.88rem}.aviso-chat small{font-size:.8rem;opacity:.85}
+.aviso-chat i{flex:none;padding:4px 10px;border-radius:999px;background:var(--lima);color:var(--verde);font-style:normal;font-weight:800;font-size:.75rem}
+@media(max-width:700px){
+  .avisos-chat{left:12px;right:12px;bottom:12px;width:auto}
+  .chat-item{padding:10px 12px;gap:10px}.ci-avatar{width:40px;height:40px;font-size:1.05rem}
+  .chats-lista{gap:6px}
+}
+
+/* ===== Menú agrupado: Atención al cliente / Administración del restaurante ===== */
+#nav{gap:2px}
+.nav-grupo{display:grid;gap:2px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.12)}
+.nav-grupo p{margin:0 0 4px;padding:0 14px;color:var(--lima);font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;opacity:.85}
+.nav-grupo a{padding:9px 14px}
+#btnMenu{position:relative}
+#btnMenu.con-chats::after{content:"";position:absolute;top:6px;right:6px;width:10px;height:10px;border-radius:50%;background:var(--naranja);box-shadow:0 0 0 2px #fff}

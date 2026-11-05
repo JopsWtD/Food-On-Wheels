@@ -7,10 +7,18 @@ import { abrirFactura } from "../../shared/pedidos.js";
 import { S, db, en, nombreDe } from "./estado.js";
 import { aviso, dialogo, opcion, panel, pedirAcceso } from "./ui.js";
 import { agregar, abrirCarrito } from "./carrito.js";
+import { sinLeerDe } from "./chat.js";
 
 const limpio = (t) => esc(t);
+// Chat con el restaurante: abierto mientras el pedido está en curso; después solo se puede ver el historial
+function botonChat(p) {
+  const c = S.chats[p.id], n = sinLeerDe(p.id), fin = terminado(p);
+  if (fin && !c) return "";
+  const texto = fin ? "💬 Ver chat" : c ? "💬 Chat con el restaurante" : "💬 Escribir al restaurante";
+  return `<button class="btn ${fin ? "btn-gris" : "btn-verde"} btn-mini btn-chat" type="button" data-chat="${p.id}">${texto}${n ? `<span class="chat-cont" aria-label="${n} sin leer">${n}</span>` : ""}</button>`;
+}
 function bloqueAcciones(p) {
-  if (p.estado === "pendiente") return `<div class="pedido-acciones"><button class="enlace peligro" type="button" data-cancelar-pedido="${p.id}">Cancelar pedido</button><small>Puedes cancelarlo hasta que empecemos a prepararlo.</small></div>`;
+  if (p.estado === "pendiente") return `<div class="pedido-botones">${botonChat(p)}</div><div class="pedido-acciones"><button class="enlace peligro" type="button" data-cancelar-pedido="${p.id}">Cancelar pedido</button><small>Puedes cancelarlo hasta que empecemos a prepararlo.</small></div>`;
   let h = "";
   const r = S.reclamos[p.id];
   if (r) {
@@ -20,8 +28,8 @@ function bloqueAcciones(p) {
       : `✅ Reclamo aprobado: te reenviamos lo que faltó en el pedido ${codigoPedido(r.reposicionId)}.`;
     h += `<div class="reclamo-estado ${r.estado}"><b>${txt}</b>${r.respuesta ? `<span>Respuesta del restaurante: “${limpio(r.respuesta)}”</span>` : ""}</div>`;
   }
-  if (!terminado(p)) return h;
-  const botones = [];
+  if (!terminado(p)) return h + `<div class="pedido-botones">${botonChat(p)}</div>`;
+  const botones = [botonChat(p)].filter(Boolean);
   if (!p.reposicionDe) botones.push(`<button class="btn btn-gris btn-mini" type="button" data-repetir="${p.id}">🔁 Volver a pedir</button>`);
   if (p.estado === "entregado" && !p.reposicionDe) botones.push(`<button class="btn btn-gris btn-mini" type="button" data-factura="${p.id}">🧾 Factura</button>`);
   if (!r && puedeReclamar(p)) botones.push(`<button class="btn btn-gris btn-mini" type="button" data-reclamo="${p.id}" title="Disponible hasta ${fechaHora(p.tiempos.entregado + VENTANA_RECLAMO)}">⚠️ Reportar un problema</button>`);

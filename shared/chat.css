@@ -1,0 +1,80 @@
+/* Ventana de chat compartida por cliente y admin (shared/chat.js).
+   Usa las variables de color de cada interfaz; los respaldos permiten usarla en cualquiera de las dos. */
+dialog.chat{
+  --c-verde:var(--verde,#0f3d2e); --c-verde2:var(--verde-2,var(--verde2,#17604a)); --c-naranja:var(--naranja,#f26a1b);
+  --c-crema:var(--crema,#fbf8f1); --c-linea:var(--linea,#e7e2d6); --c-gris:var(--gris,#6b766f); --c-tinta:var(--tinta,#1d2a24);
+  position:fixed; inset:0; width:min(420px,calc(100% - 24px)); height:min(660px,calc(100dvh - 24px)); max-width:none; max-height:none;
+  margin:auto 24px 24px auto; padding:0; border:0; border-radius:22px; overflow:hidden; background:var(--c-crema); color:var(--c-tinta);
+  box-shadow:0 24px 60px rgba(15,40,30,.35);
+}
+dialog.chat[open]{animation:chat-abre .28s cubic-bezier(.2,.9,.3,1)}
+dialog.chat::backdrop{background:rgba(15,40,30,.35)}
+@keyframes chat-abre{from{opacity:0;transform:translateY(24px) scale(.98)}}
+dialog.chat *,dialog.chat *::before,dialog.chat *::after{box-sizing:border-box}
+.chat-caja{position:relative;display:flex;flex-direction:column;height:100%}
+
+/* Cabecera */
+.chat-cab{display:flex;align-items:center;gap:12px;padding:14px 14px 14px 16px;background:var(--c-verde);color:#fff}
+.chat-avatar{flex:none;display:grid;place-items:center;width:42px;height:42px;border-radius:50%;background:var(--c-naranja);color:#fff;font:800 1.15rem var(--f-titulo,var(--t,sans-serif))}
+.chat-titulo{flex:1;min-width:0;display:grid}
+.chat-titulo b{font:800 1.1rem/1.15 var(--f-titulo,var(--t,sans-serif));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-titulo small{color:var(--lima,#d9f26b);font-weight:700;font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-x{flex:none;width:38px;height:38px;border:0;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;font-size:1rem;cursor:pointer;transition:background .2s}
+.chat-x:hover{background:rgba(255,255,255,.25)}
+
+/* Mensajes */
+.chat-cuerpo{flex:1;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:3px;padding:14px 14px 8px;
+  background:radial-gradient(circle at 20% 0,rgba(217,242,107,.18),transparent 55%),var(--c-crema)}
+.msj{max-width:82%;display:grid;gap:2px;padding:8px 12px 6px;border-radius:16px;font-size:.92rem;line-height:1.4;animation:chat-msj .22s ease-out}
+.msj p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.msj small{justify-self:end;font-size:.68rem;opacity:.7}
+.msj.fin{margin-bottom:8px}
+.msj.suyo{align-self:flex-start;background:#fff;border:1px solid var(--c-linea);border-bottom-left-radius:16px}
+.msj.suyo.fin{border-bottom-left-radius:4px}
+.msj.mio{align-self:flex-end;background:var(--c-verde2);color:#fff}
+.msj.mio.fin{border-bottom-right-radius:4px}
+.chat-autor{font-style:normal;font-weight:800;font-size:.72rem;opacity:.85}
+@keyframes chat-msj{from{opacity:0;transform:translateY(6px)}}
+.chat-dia{align-self:center;margin:8px 0;font-size:.72rem;font-weight:700;color:var(--c-gris);text-transform:capitalize}
+.chat-dia span{padding:3px 10px;border-radius:999px;background:rgba(0,0,0,.05)}
+.chat-dia.cierre{text-transform:none}.chat-dia.cierre span{background:#fde2e0;color:#b3261e}
+.chat-visto{align-self:flex-end;margin:-4px 2px 6px;font-size:.7rem;font-weight:700;color:var(--c-verde2)}
+.chat-vacio{margin:auto;max-width:280px;text-align:center;color:var(--c-gris)}
+.chat-vacio span{display:block;font-size:2.6rem;margin-bottom:6px}
+.chat-cargando{margin:auto;color:var(--c-gris);font-weight:700}
+.chat-nuevos{position:absolute;left:50%;bottom:92px;transform:translateX(-50%);padding:6px 14px;border:0;border-radius:999px;background:var(--c-naranja);color:#fff;font-weight:700;font-size:.8rem;box-shadow:0 6px 16px rgba(0,0,0,.2);cursor:pointer}
+.chat-nuevos[hidden]{display:none}
+
+/* Respuestas rápidas */
+.chat-rapidas{display:flex;gap:6px;overflow-x:auto;padding:6px 12px 0;scrollbar-width:none}
+.chat-rapidas::-webkit-scrollbar{display:none}
+.chat-rapidas[hidden]{display:none}
+.chat-rapida{flex:none;padding:6px 12px;border:1px solid var(--c-linea);border-radius:999px;background:#fff;color:var(--c-verde);font:700 .78rem var(--f-texto,var(--x,sans-serif));cursor:pointer;transition:background .2s,border-color .2s}
+.chat-rapida:hover{border-color:var(--c-verde2);background:#f1f7ef}
+
+/* Escribir */
+.chat-form{position:relative;display:flex;align-items:flex-end;gap:8px;padding:10px 12px 12px;border-top:1px solid var(--c-linea);background:#fff}
+.chat-form[hidden]{display:none}
+.chat-form textarea{flex:1;min-height:42px;max-height:120px;padding:10px 14px;border:1px solid var(--c-linea);border-radius:21px;background:var(--c-crema);font:inherit;font-size:.92rem;line-height:1.35;resize:none;outline:none}
+.chat-form textarea:focus{border-color:var(--c-verde2);background:#fff;box-shadow:0 0 0 3px rgba(23,96,74,.15)}
+.chat-enviar{flex:none;width:42px;height:42px;border:0;border-radius:50%;background:var(--c-naranja);color:#fff;font-size:1.05rem;cursor:pointer;transition:transform .15s,opacity .2s}
+.chat-enviar:not(:disabled):hover{transform:scale(1.06)}
+.chat-enviar:disabled{opacity:.4;cursor:default}
+.chat-cuenta{position:absolute;right:66px;top:-20px;font-size:.7rem;font-weight:700;color:var(--c-gris)}
+.chat-cerrado{margin:0;padding:14px 16px 16px;border-top:1px solid var(--c-linea);background:#fff;color:var(--c-gris);font-size:.85rem}
+.chat-cerrado[hidden]{display:none}
+
+/* Botón para abrir el chat (tarjetas de pedido y tabla del admin) */
+.btn-chat{display:inline-flex;align-items:center;gap:6px}
+.chat-cont{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--naranja,#f26a1b);color:#fff;font-size:.72rem;font-weight:800;animation:chat-pulso 1.8s infinite}
+@keyframes chat-pulso{50%{box-shadow:0 0 0 5px rgba(242,106,27,.2)}}
+
+/* Celular: pantalla completa */
+@media (max-width:699px){
+  dialog.chat{width:100%;height:100dvh;margin:0;border-radius:0}
+  dialog.chat[open]{animation:chat-sube .3s cubic-bezier(.2,.9,.3,1)}
+  @keyframes chat-sube{from{transform:translateY(40px);opacity:0}}
+  .chat-cab{padding-top:max(14px,env(safe-area-inset-top))}
+  .chat-form{padding-bottom:max(12px,env(safe-area-inset-bottom))}
+}
+@media (prefers-reduced-motion:reduce){dialog.chat[open],.msj,.chat-cont{animation:none}}
