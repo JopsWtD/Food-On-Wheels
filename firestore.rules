@@ -98,12 +98,14 @@ service cloud.firestore {
     // Catálogo: lo ve cualquiera (también visitantes), solo el admin lo modifica.
     match /productos/{id}  { allow read: if true; allow write: if esAdmin(); }
     match /categorias/{id} { allow read: if true; allow write: if esAdmin(); }
+    // Eventos: descuentos por producto o por categoría que el admin enciende y apaga
+    match /eventos/{id}    { allow read: if true; allow write: if esAdmin(); }
     // Imagen grande de cada producto (la miniatura va dentro del producto)
     match /imagenes/{id}   { allow read: if true; allow write: if esAdmin(); }
     // Unidades vendidas por producto: alimenta «Los más pedidos» del cliente
     match /stats/{id}      { allow read: if true; allow write: if esAdmin(); }
     match /inventario/{id} { allow read: if true; allow write: if esAdmin(); }
-    // config/tienda (datos del negocio, envío y Prime), config/banner y config/promos
+    // config/tienda (datos del negocio, envío y Prime) y config/banner
     match /config/{id}     { allow read: if true; allow write: if esAdmin(); }
 
     match /historial/{id}  { allow read, write: if esAdmin(); }

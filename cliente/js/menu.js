@@ -1,9 +1,8 @@
 // Menú del cliente: inicio por secciones (Combos, Los más pedidos y cada categoría),
 // vista "Ver todo" de una categoría y resultados de búsqueda.
 import { $, $$, esc, dinero } from "../../shared/util.js";
-import { precioFinal } from "../../shared/dominio.js";
-import { PRODUCTOS, PROMOCIONES, BANNER, TIENDA, esCombo, combos, categoriasVisibles, productosDeCategoria, masPedidos, sumaSeparado, disponibles, agotado, categoriaDe } from "../../shared/catalogo.js";
-import { S, en, nombreDe } from "./estado.js";
+import { PRODUCTOS, BANNER, TIENDA, precioFinal, descuentoDe, eventosVigentes, objetivoDe, esCombo, combos, categoriasVisibles, productosDeCategoria, masPedidos, sumaSeparado, disponibles, agotado, categoriaDe } from "../../shared/catalogo.js";
+import { S, en, emitir, nombreDe } from "./estado.js";
 import { cantidadEn } from "./carrito.js";
 
 const POR_SECCION = 8; // productos que se muestran en cada sección del inicio
@@ -20,12 +19,12 @@ function extras(p) {
   return h;
 }
 export function tarjeta(p, i = 0) {
-  const ag = agotado(p), n = cantidadEn(p.id);
+  const ag = agotado(p), n = cantidadEn(p.id), ev = descuentoDe(p);
   return `<article class="tarjeta${ag ? " agotado" : ""}" data-pid="${p.id}" style="--i:${Math.min(i, 10)}">
     <button class="tarjeta-abrir" type="button" data-abrir="${p.id}" aria-label="Ver detalle de ${esc(p.nombre)}"></button>
-    <div class="tarjeta-img" aria-hidden="true">${p.imagen ? `<img src="${p.imagen}" alt="" loading="lazy">` : esc(p.emoji)}${ag ? '<span class="etiqueta-desc etiqueta-agotado">Agotado</span>' : p.descuento ? `<span class="etiqueta-desc">-${p.descuento}%</span>` : ""}<span class="en-carrito"${n ? "" : " hidden"}>${n ? "×" + n : ""}</span></div>
-    <div class="tarjeta-cuerpo"><h3>${esc(p.nombre)}</h3><p>${esc(p.descripcion)}</p>${extras(p)}
-      <div class="tarjeta-pie"><span class="precio">${p.descuento ? `<s>${dinero(p.precio)}</s>` : ""}${dinero(precioFinal(p))}</span>
+    <div class="tarjeta-img" aria-hidden="true">${p.imagen ? `<img src="${p.imagen}" alt="" loading="lazy">` : esc(p.emoji)}${ag ? '<span class="etiqueta-desc etiqueta-agotado">Agotado</span>' : ev ? `<span class="etiqueta-desc" title="${esc(ev.nombre)}">-${ev.porcentaje}%</span>` : ""}<span class="en-carrito"${n ? "" : " hidden"}>${n ? "×" + n : ""}</span></div>
+    <div class="tarjeta-cuerpo">${ev && !ag ? `<span class="ev-nombre">🎉 ${esc(ev.nombre)}</span>` : ""}<h3>${esc(p.nombre)}</h3><p>${esc(p.descripcion)}</p>${extras(p)}
+      <div class="tarjeta-pie"><span class="precio">${ev ? `<s>${dinero(p.precio)}</s>` : ""}${dinero(precioFinal(p))}</span>
       <button class="btn-anadir" type="button" data-id="${p.id}" aria-label="Añadir ${esc(p.nombre)}"${ag ? " disabled" : ""}>${ag ? "Agotado" : "+ Añadir"}</button></div></div></article>`;
 }
 // Actualiza la marca "×2" de cada tarjeta sin volver a dibujar el menú
@@ -118,13 +117,18 @@ function actualizarFlechas(fila) {
 }
 
 /* ===== Promociones y banner ===== */
-function pintarPromos() {
-  $("#listaPromos").innerHTML = PROMOCIONES.map((x) => `<button class="promo" type="button" data-filtro="${esc(x.filtro)}"><h3>${esc(x.titulo)}</h3><p>${esc(x.texto)}</p></button>`).join("");
+// Franja del inicio con los eventos vigentes. Al tocar uno lleva al producto o a la sección que tiene el descuento.
+function pintarEventos() {
+  const l = eventosVigentes().map((e) => ({ e, o: objetivoDe(e) })).filter(({ o }) => o);
+  $("#promos").hidden = !l.length;
+  $("#listaPromos").innerHTML = l.map(({ e, o }, k) => `<button class="promo evento" type="button" style="--i:${k}" data-evento="${esc(e.id)}">
+    <span class="evento-pct">-${e.porcentaje}%</span><h3>${esc(e.nombre)}</h3>${e.texto ? `<p>${esc(e.texto)}</p>` : ""}
+    <small>${esc(o.emoji || "🍽️")} ${e.objetivo.tipo === "producto" ? esc(o.nombre) : "Toda la sección " + esc(o.nombre)}${e.hasta ? ` · hasta el ${new Date(e.hasta).toLocaleDateString("es-CO", { day: "numeric", month: "short" })}` : ""}</small></button>`).join("");
 }
-function irAPromo(filtro) {
-  if (filtro === "prime") return $("#prime").scrollIntoView({ behavior: "smooth" });
-  const s = secciones().find((x) => x.nombre.toLowerCase() === filtro.toLowerCase());
-  s ? irASeccion(s.id) : $("#menu").scrollIntoView({ behavior: "smooth" });
+function irAEvento(id) {
+  const e = eventosVigentes().find((x) => x.id === id); if (!e) return;
+  if (e.objetivo.tipo === "producto") return emitir("abrirDetalle", e.objetivo.id);
+  secciones().some((s) => s.id === e.objetivo.id) ? irASeccion(e.objetivo.id) : $("#menu").scrollIntoView({ behavior: "smooth" });
 }
 function aplicarBanner() {
   const b = BANNER, h = $("#hPlato");
@@ -142,17 +146,17 @@ export function iniciarMenu() {
     if (d.ver) verTodo(d.ver);
     if (d.inicio !== undefined) { S.vista = { tipo: "inicio" }; pintarMenu(); $("#menu").scrollIntoView(); }
     if (d.limpiar !== undefined) { S.texto = ""; $("#buscar").value = ""; pintarMenu(); }
-    if (d.filtro) irAPromo(d.filtro);
+    if (d.evento) irAEvento(d.evento);
     if (d.mover) { const f = $(".fila", t.closest(".fila-wrap")); f.scrollBy({ left: +d.mover * f.clientWidth * .85, behavior: "smooth" }); }
   });
   document.addEventListener("scroll", (e) => { if (e.target.classList?.contains("fila")) actualizarFlechas(e.target); }, { capture: true, passive: true });
   let espera;
   $("#buscar").oninput = (e) => { clearTimeout(espera); espera = setTimeout(() => { S.texto = e.target.value.toLowerCase().trim(); pintarMenu(); if (S.texto) $("#menu").scrollIntoView({ behavior: "smooth" }); }, 180); };
   en("catalogo", (tipo) => {
-    if (["productos", "categorias", "inventario", "popularidad"].includes(tipo)) pintarMenu();
-    if (tipo === "promos") pintarPromos();
+    if (["productos", "categorias", "inventario", "popularidad", "eventos"].includes(tipo)) pintarMenu();
+    if (["eventos", "productos", "categorias"].includes(tipo)) pintarEventos();
     if (tipo === "banner" || tipo === "tienda") aplicarBanner();
   });
   en("carrito", marcarEnCarrito);
-  pintarMenu(); pintarPromos(); aplicarBanner();
+  pintarMenu(); pintarEventos(); aplicarBanner();
 }

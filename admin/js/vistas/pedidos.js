@@ -1,6 +1,6 @@
 import { esc, dinero, hora } from "../../../shared/util.js";
-import { ESTADOS, siguiente, textoAccion, codigoPedido, etiquetaAdmin, precioFinal } from "../../../shared/dominio.js";
-import { faltantes, producto } from "../../../shared/catalogo.js";
+import { ESTADOS, siguiente, textoAccion, codigoPedido, etiquetaAdmin, aplicarDescuento, terminado } from "../../../shared/dominio.js";
+import { faltantes, producto, precioFinal, EVENTOS } from "../../../shared/catalogo.js";
 import { S, coincide, nombreDe } from "../estado.js";
 import { tabla, badge, editor, aviso } from "../ui.js";
 import { cambiarEstado, errorEstado } from "../servicios.js";
@@ -9,15 +9,17 @@ let filtro = "todos";
 
 // Alerta si los precios del pedido no cuadran con el catálogo (p. ej. alguien alteró el total desde el navegador)
 function alertaPrecio(p) {
-  if (p.reposicionDe || p.estado === "cancelado") return "";
+  if (p.reposicionDe || terminado(p)) return ""; // en pedidos terminados ya no tiene sentido (los eventos pudieron cambiar)
   const suma = p.items.reduce((s, i) => s + i.precio * i.cant, 0);
-  const masBarato = p.items.some((i) => { const x = producto(i.id); return x && i.precio < precioFinal(x) - 1; });
+  // Un precio menor al actual se acepta si coincide con el descuento de un evento que existe con ese nombre
+  const valido = (i, x) => i.precio >= precioFinal(x) - 1 || (i.descuento && EVENTOS.some((e) => e.nombre === i.evento && e.porcentaje >= i.descuento) && i.precio >= aplicarDescuento(x.precio, i.descuento) - 1);
+  const masBarato = p.items.some((i) => { const x = producto(i.id); return x && !valido(i, x); });
   const primeSinMembresia = p.prime > 0 && !S.cuentas.find((c) => c.uid === p.uid)?.prime;
   const noCuadra = Math.abs(suma - p.sub) > 1 || Math.abs(p.sub - p.prime + (p.envio || 0) - p.total) > 1;
   return masBarato || primeSinMembresia || noCuadra ? `<small class="alerta-precio" title="Los precios o el descuento no coinciden con el catálogo actual">⚠️ Revisar precios</small>` : "";
 }
 export function filaPedido(p, editable) {
-  const det = p.items.map((i) => `${i.cant}× ${esc(nombreDe(i.id))}${i.nota ? ` <i class="nota-item">(${esc(i.nota)})</i>` : ""}`).join(", ");
+  const det = p.items.map((i) => `${i.cant}× ${esc(nombreDe(i.id))}${i.descuento ? ` <span class="ev-mini" title="${esc(i.evento)}">-${i.descuento}%</span>` : ""}${i.nota ? ` <i class="nota-item">(${esc(i.nota)})</i>` : ""}`).join(", ");
   const rec = p.entrega === "recoger", sig = siguiente(p);
   const contacto = [!rec && p.direccion ? `📍 ${esc(p.direccion)}` : "", p.cliente.telefono ? `📞 ${esc(p.cliente.telefono)}` : ""].filter(Boolean).join(" · ");
   const falta = p.estado === "pendiente" && !p.descontado ? faltantes(p.items) : [];

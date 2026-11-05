@@ -59,13 +59,15 @@ Abre la carpeta en VS Code y usa Live Server (los archivos son módulos: no func
 | `reclamos/{n}` | reclamos con foto; el cliente elige reembolso o reenvío |
 | `stats/popularidad` | unidades entregadas por producto («Los más pedidos») |
 | `config/tienda` | datos del negocio, costo del domicilio y % de Prime |
-| `config/banner`, `config/promos` | apariencia del inicio |
+| `eventos/{id}` | descuentos (% a un producto o a una categoría), encendidos a mano y con fechas opcionales |
+| `config/banner` | banner del inicio |
 | `historial`, `membresias` | movimientos de inventario y membresías vendidas |
 
 ## Reglas de negocio
 - **Pedidos:** el admin solo avanza al paso siguiente o cancela con motivo; un pedido entregado o cancelado ya no cambia. El cliente puede cancelar mientras está pendiente.
 - **Inventario:** se descuenta al empezar a preparar y se devuelve al cancelar (en una transacción). Si no alcanza, el pedido no avanza.
 - **Combos:** se arman con productos y cantidades, tienen precio fijo y se agotan cuando alguno de sus productos no alcanza.
+- **Eventos:** son la única forma de dar descuento. Aplican un % a un producto o a una categoría; si varios aplican al mismo producto, gana el mayor. Funcionan si están encendidos y, si tienen fechas, solo dentro del rango (se activan y apagan solos, sin recargar). FoW Prime es una regla global (Configuración) que se aplica sobre el subtotal, además de los eventos.
 - **Reclamos:** hasta 24 horas después de la entrega, con foto. El reembolso se registra; el dinero se devuelve a mano.
 - **Facturas:** una por pedido entregado, imprimible o guardable como PDF (admin y cliente).
 - **Escalabilidad:** el admin carga solo los pedidos de los últimos 60 días (ampliable desde Facturas) para no agotar las lecturas del plan Spark.

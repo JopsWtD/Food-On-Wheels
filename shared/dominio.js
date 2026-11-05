@@ -36,11 +36,23 @@ export const VENTANA_RECLAMO = 24 * 3600 * 1000; // se puede reclamar hasta 24 h
 export const MOTIVOS_RECLAMO = { equivocado: "Recibí un pedido equivocado", falto: "Faltó algo", estado: "Llegó en mal estado", otro: "Otro" };
 export const puedeReclamar = (p) => p.estado === "entregado" && !!p.tiempos?.entregado && Date.now() - p.tiempos.entregado < VENTANA_RECLAMO;
 
-/* ===== PRECIOS ===== */
-export const precioFinal = (p) => p.descuento ? p.precio * (1 - p.descuento / 100) : p.precio;
-// Totales de un pedido. tienda = { primeDescuento (%), costoEnvio }
-export function calcularTotales(items, buscar, { prime = false, entrega = "domicilio", tienda }) {
-  const sub = items.reduce((s, i) => { const p = buscar(i.id); return s + (p ? precioFinal(p) * i.cant : 0); }, 0);
+/* ===== EVENTOS (descuentos) =====
+   Un evento aplica un % de descuento a un producto o a una categoría completa.
+   Está vigente si el admin lo tiene encendido y, si tiene fechas, la hora actual está dentro del rango. */
+export function estadoEvento(e, ahora = Date.now()) {
+  if (!e.activo) return "apagado";
+  if (e.desde && ahora < Date.parse(e.desde)) return "programado";
+  if (e.hasta && ahora >= Date.parse(e.hasta)) return "vencido";
+  return "vigente";
+}
+export const eventoVigente = (e, ahora) => estadoEvento(e, ahora) === "vigente";
+export const aplicarDescuento = (precio, pct) => Math.round(precio * (1 - (pct || 0) / 100));
+
+/* ===== TOTALES =====
+   precioDe(id) devuelve el precio unitario final (ya con el descuento del evento). tienda = { primeDescuento, costoEnvio }.
+   Prime se aplica sobre el subtotal, después de los descuentos de los eventos (se acumulan). */
+export function calcularTotales(items, precioDe, { prime = false, entrega = "domicilio", tienda }) {
+  const sub = items.reduce((s, i) => s + (precioDe(i.id) ?? 0) * i.cant, 0);
   const descPrime = prime ? sub * (tienda.primeDescuento || 0) / 100 : 0;
   const envio = entrega === "domicilio" && sub > 0 ? (tienda.costoEnvio || 0) : 0;
   return { sub, prime: descPrime, envio, total: sub - descPrime + envio };

@@ -1,15 +1,10 @@
 // Catálogo en vivo: productos, combos, categorías, inventario y configuración de la tienda.
 // Las variables "export let" son enlaces vivos: quien las importa siempre ve el valor actual.
 import { collection, doc, onSnapshot } from "./firebase.js";
-import { precioFinal } from "./dominio.js";
+import { eventoVigente, estadoEvento, aplicarDescuento } from "./dominio.js";
 
 /* ===== DATOS BASE (se suben una sola vez, la primera vez que entra un admin) =====
    Los productos, combos y categorías NO están en el código: se crean desde el panel admin. */
-export const PROMOCIONES_BASE = [
-  { titulo: "Martes de arepas",   texto: "20% menos en la arepa rellena.",           filtro: "Entradas" },
-  { titulo: "Combos en familia",  texto: "Hasta 15% menos en combos seleccionados.", filtro: "Combos" },
-  { titulo: "FoW Prime",          texto: "25% de descuento en todas tus compras.",   filtro: "prime" }
-];
 // [insumo, unidad, stock inicial, mínimo]
 export const INSUMOS = [["Arroz","kg",40,15],["Frijol","kg",18,10],["Carne de res","kg",25,12],["Carne de cerdo","kg",20,10],["Pollo","kg",30,12],["Plátano maduro","und",60,30],["Plátano verde","und",50,25],["Huevos","und",120,60],["Aguacate","und",35,20],["Harina de maíz","kg",22,8],["Papa","kg",45,20],["Yuca","kg",9,10],["Queso","kg",12,6],["Limón","kg",8,5],["Coco","und",14,10],["Lulo","kg",6,6],["Panela","kg",10,4],["Aceite","L",16,8]];
 export const BANNER_BASE = { etiqueta: "Cocina colombiana", titulo: "Un pedacito de Colombia en cada bocado.", texto: "Sabores que saben a casa. Elige tus favoritos y pide para recoger o recibir en tu puerta.", boton: "Explorar el menú", emoji: "🍛", imagen: "" };
@@ -21,7 +16,7 @@ export let PRODUCTOS = [];     // productos y combos
 export let RECETAS = {};       // id → [[insumo | "@idProducto", cantidad]]
 export let CATEGORIAS = [];    // [{ id, nombre, emoji, orden, visible }] ordenadas
 export let INVENTARIO = inventarioBase(); // [{ _id, n, u, s, m }]
-export let PROMOCIONES = PROMOCIONES_BASE;
+export let EVENTOS = [];       // [{ id, nombre, texto, porcentaje, objetivo: {tipo, id}, activo, desde, hasta }]
 export let BANNER = BANNER_BASE;
 export let TIENDA = TIENDA_BASE;
 export let POPULARIDAD = {};   // id → unidades entregadas (stats/popularidad)
@@ -35,9 +30,23 @@ const recetaDeDoc = (r = []) => r.map(({ k, c }) => [k, c]);
    Internamente su receta es [["@id", cant]], así el stock se calcula a través de sus productos. */
 export const esCombo = (p) => p?.tipo === "combo";
 export const incluyeDe = (p) => p.incluye || (p.receta || []).filter(({ k }) => String(k).startsWith("@")).map(({ k, c }) => ({ id: +k.slice(1), cant: c }));
-export const comboADoc = (p, incluye) => ({ ...p, tipo: "combo", incluye, descuento: 0 });
+export const comboADoc = (p, incluye) => ({ ...p, tipo: "combo", incluye });
 export const combosQueUsan = (id) => PRODUCTOS.filter((p) => esCombo(p) && p.incluye.some((i) => i.id === id));
 export const producto = (id) => PRODUCTOS.find((p) => p.id == id);
+
+/* ===== DESCUENTOS POR EVENTOS =====
+   Si a un producto le aplican varios eventos (el suyo y el de su categoría), gana el mayor descuento. */
+const apuntaA = (e, p) => e.objetivo?.tipo === "producto" ? e.objetivo.id == p.id
+  : e.objetivo?.id === "combos" ? esCombo(p) : !esCombo(p) && categoriaDe(p)?.id === e.objetivo?.id;
+export function descuentoDe(p, ahora = Date.now()) {
+  return EVENTOS.filter((e) => eventoVigente(e, ahora) && apuntaA(e, p)).sort((a, b) => b.porcentaje - a.porcentaje)[0] || null;
+}
+export const precioFinal = (p) => aplicarDescuento(p.precio, descuentoDe(p)?.porcentaje);
+export const precioDe = (id) => { const p = producto(id); return p ? precioFinal(p) : null; };
+export const eventosVigentes = () => EVENTOS.filter((e) => eventoVigente(e));
+// Nombre de lo que afecta un evento ("Bandeja paisa", "Bebidas", "Combos")
+export const objetivoDe = (e) => e.objetivo?.tipo === "producto" ? producto(e.objetivo.id)
+  : e.objetivo?.id === "combos" ? { id: "combos", nombre: "Combos", emoji: "🍱" } : CATEGORIAS.find((c) => c.id === e.objetivo?.id);
 export const sumaSeparado = (incluye) => incluye.reduce((s, i) => { const p = producto(i.id); return s + (p ? precioFinal(p) * i.cant : 0); }, 0);
 
 /* ===== CATEGORÍAS =====
@@ -74,10 +83,24 @@ export function escucharCatalogo(db, alCambiar) {
     alCambiar("inventario");
   });
   onSnapshot(doc(db, "config", "banner"), (d) => { BANNER = { ...BANNER_BASE, ...(d.data() || {}) }; alCambiar("banner"); });
-  onSnapshot(doc(db, "config", "promos"), (d) => { PROMOCIONES = d.exists() ? d.data().lista : PROMOCIONES_BASE; alCambiar("promos"); });
+  onSnapshot(collection(db, "eventos"), (snap) => {
+    EVENTOS = snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => (b.creado || "").localeCompare(a.creado || ""));
+    alCambiar("eventos"); programarCambioDeEventos(alCambiar);
+  });
   onSnapshot(doc(db, "config", "tienda"), (d) => { TIENDA = { ...TIENDA_BASE, ...(d.data() || {}) }; alCambiar("tienda"); });
   onSnapshot(doc(db, "stats", "popularidad"), (d) => { POPULARIDAD = d.data()?.vendidos || {}; alCambiar("popularidad"); });
 }
+
+// Cuando un evento empieza o termina por fecha, avisa en ese momento para que los precios se actualicen solos
+let temporizador;
+function programarCambioDeEventos(alCambiar) {
+  clearTimeout(temporizador);
+  const ahora = Date.now(), proximos = EVENTOS.flatMap((e) => [e.desde, e.hasta]).filter(Boolean).map(Date.parse).filter((t) => t > ahora);
+  if (!proximos.length) return;
+  const espera = Math.min(...proximos) - ahora + 500;
+  if (espera < 2 ** 31 - 1) temporizador = setTimeout(() => { alCambiar("eventos"); programarCambioDeEventos(alCambiar); }, espera);
+}
+export { estadoEvento };
 
 /* ===== STOCK (calculado con las recetas y el inventario de insumos) ===== */
 export function necesidades(items) { // items: [{id, cant}] → { insumo: cantidad total }

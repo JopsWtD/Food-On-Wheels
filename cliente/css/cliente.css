@@ -417,3 +417,17 @@ dialog.hoja{width:min(560px,100%);max-height:94vh;overflow:hidden;border-radius:
 .resumen-pedido .total{margin:6px 0 0}
 .pedido-botones{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px;padding-top:10px;border-top:1px dashed var(--linea)}
 .pedido-items i{color:var(--verde-2)}
+
+/* ===== Eventos (descuentos) ===== */
+.promo.evento{position:relative;display:grid;gap:4px;align-content:start;min-height:120px;padding:18px 20px;border-radius:var(--radio);background:linear-gradient(135deg,var(--amarillo),#ffd36b);color:var(--verde);overflow:hidden;animation:entra .4s calc(var(--i) * 80ms) backwards;transition:transform .25s,box-shadow .25s}
+.promo.evento:nth-child(3n+2){background:linear-gradient(135deg,var(--lima),#eefaa8)}
+.promo.evento:nth-child(3n+3){background:linear-gradient(135deg,var(--verde-2),var(--verde));color:#fff}
+.promo.evento small{margin-top:auto;padding-top:6px;font-size:.78rem;font-weight:700;opacity:.85}
+.promo.evento p{margin:0}
+.evento-pct{position:absolute;top:12px;right:14px;padding:4px 12px;border-radius:999px;background:var(--naranja);color:#fff;font:800 1rem var(--f-texto);transform:rotate(4deg);box-shadow:0 6px 14px rgba(242,106,27,.35)}
+.promo.evento h3{padding-right:72px}
+@media (hover:hover){.promo.evento:hover{transform:translateY(-4px);box-shadow:0 14px 28px rgba(15,61,46,.18)}}
+.ev-nombre{align-self:flex-start;padding:2px 10px;border-radius:999px;background:#ffe9d9;color:#b84a0a;font-size:.72rem;font-weight:800}
+.ev-mini{display:inline-block;padding:0 6px;border-radius:999px;background:var(--naranja);color:#fff;font-size:.7rem;font-weight:800}
+.item s.antes{color:var(--gris);font-size:.8rem}
+.hoja-evento{padding:10px 14px;border-radius:12px;background:#ffe9d9;color:#b84a0a;font-size:.9rem}

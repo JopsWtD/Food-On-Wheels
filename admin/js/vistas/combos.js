@@ -1,6 +1,5 @@
 import { $, esc, dinero } from "../../../shared/util.js";
-import { precioFinal } from "../../../shared/dominio.js";
-import { PRODUCTOS, esCombo, comboADoc, producto, sumaSeparado } from "../../../shared/catalogo.js";
+import { PRODUCTOS, precioFinal, esCombo, comboADoc, producto, sumaSeparado } from "../../../shared/catalogo.js";
 import { coincide, nombreDe } from "../estado.js";
 import { tabla, campo, mini, editor, campoImagen, leerImagen, aviso, fallo } from "../ui.js";
 import { guardarProducto, eliminarProductos, nuevoId } from "../servicios.js";

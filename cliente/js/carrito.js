@@ -3,8 +3,8 @@
 // así se continúa en cualquier dispositivo.
 import { $, esc, dinero, animar } from "../../shared/util.js";
 import { doc, updateDoc } from "../../shared/firebase.js";
-import { PRODUCTOS, TIENDA, producto, faltantes } from "../../shared/catalogo.js";
-import { precioFinal, calcularTotales } from "../../shared/dominio.js";
+import { PRODUCTOS, TIENDA, producto, faltantes, precioFinal, precioDe, descuentoDe } from "../../shared/catalogo.js";
+import { calcularTotales } from "../../shared/dominio.js";
 import { crearPedido } from "../../shared/pedidos.js";
 import { S, db, en, emitir, primeActivo, bloqueado, AVISO_BLOQ } from "./estado.js";
 import { aviso, panel, pedirAcceso } from "./ui.js";
@@ -17,7 +17,7 @@ export function guardarCarrito() {
 // Solo los productos que siguen existiendo (el admin pudo borrar alguno)
 export const carritoValido = () => S.carrito.filter((i) => PRODUCTOS.some((p) => p.id === i.id));
 export const cantidadEn = (id) => S.carrito.find((i) => i.id === id)?.cant || 0;
-export const totales = (entrega = "recoger") => calcularTotales(carritoValido(), producto, { prime: primeActivo(), entrega, tienda: TIENDA });
+export const totales = (entrega = "recoger") => calcularTotales(carritoValido(), precioDe, { prime: primeActivo(), entrega, tienda: TIENDA });
 
 // Agrega (o quita, con cant negativa) unidades; comprueba que alcance el inventario
 export function agregar(id, cant = 1, nota) {
@@ -40,9 +40,9 @@ function pintar() {
   const lista = carritoValido(), n = lista.reduce((s, i) => s + i.cant, 0);
   $("#contador").textContent = n; $("#contador").hidden = !n;
   $("#itemsCarrito").innerHTML = lista.length ? lista.map((i) => {
-    const p = producto(i.id), pf = precioFinal(p);
+    const p = producto(i.id), pf = precioFinal(p), ev = descuentoDe(p);
     return `<div class="item"><button class="item-emoji" type="button" data-abrir="${p.id}" aria-label="Ver ${esc(p.nombre)}">${p.imagen ? `<img src="${p.imagen}" alt="">` : esc(p.emoji)}</button>
-      <div><b>${esc(p.nombre)}</b>${dinero(pf)}${i.cant > 1 ? `<small class="linea-total">${i.cant} × ${dinero(pf)} = <b>${dinero(pf * i.cant)}</b></small>` : ""}${i.nota ? `<small class="nota-item">📝 ${esc(i.nota)}</small>` : ""}</div>
+      <div><b>${esc(p.nombre)}</b>${ev ? `<s class="antes">${dinero(p.precio)}</s> ` : ""}${dinero(pf)}${ev ? ` <span class="ev-mini">-${ev.porcentaje}%</span>` : ""}${i.cant > 1 ? `<small class="linea-total">${i.cant} × ${dinero(pf)} = <b>${dinero(pf * i.cant)}</b></small>` : ""}${i.nota ? `<small class="nota-item">📝 ${esc(i.nota)}</small>` : ""}</div>
       <div class="cantidad"><button data-menos="${p.id}" aria-label="Quitar uno">−</button>${i.cant}<button data-mas="${p.id}" aria-label="Agregar uno">+</button></div></div>`;
   }).join("") : `<div class="vacio vacio-grande"><span aria-hidden="true">🛒</span><p>Tu carrito está vacío.</p><button class="btn btn-naranja" type="button" data-ir-menu>Ver el menú</button></div>`;
   const t = totales();
@@ -79,7 +79,7 @@ async function enviarPedido(e) {
     uid: S.cliente.uid, estado: "pendiente", fecha: new Date().toISOString(), tiempos: { pendiente: Date.now() },
     cliente: { nombre: f.nombre.value.trim(), telefono: f.telefono.value.trim(), correo: S.cliente.correo },
     entrega, direccion: entrega === "domicilio" ? f.direccion.value.trim() : "", notas: f.notas.value.trim(),
-    items: items.map((i) => ({ id: i.id, cant: i.cant, precio: precioFinal(producto(i.id)), ...(i.nota ? { nota: i.nota } : {}) })),
+    items: items.map((i) => { const p = producto(i.id), ev = descuentoDe(p); return { id: i.id, cant: i.cant, precio: precioFinal(p), ...(ev ? { evento: ev.nombre, descuento: ev.porcentaje } : {}), ...(i.nota ? { nota: i.nota } : {}) }; }),
     ...totales(entrega)
   };
   btn.disabled = true;

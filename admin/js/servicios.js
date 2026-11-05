@@ -1,7 +1,7 @@
 // Operaciones del admin que escriben en Firestore. Las vistas las usan; aquí vive la lógica delicada.
 import { doc, collection, getDoc, getDocs, setDoc, deleteDoc, addDoc, query, where, limit, writeBatch, runTransaction, deleteField, increment } from "../../shared/firebase.js";
-import { RECETAS, INVENTARIO, PROMOCIONES_BASE, TIENDA_BASE, inventarioBase, recetaADoc, necesidades, incluyeDe, esCombo, producto } from "../../shared/catalogo.js";
-import { siguiente, FINALES, codigoPedido, precioFinal } from "../../shared/dominio.js";
+import { RECETAS, INVENTARIO, TIENDA_BASE, inventarioBase, recetaADoc, necesidades, incluyeDe, esCombo, producto } from "../../shared/catalogo.js";
+import { siguiente, FINALES, codigoPedido, aplicarDescuento } from "../../shared/dominio.js";
 import { db } from "./estado.js";
 import { aviso } from "./ui.js";
 
@@ -77,7 +77,7 @@ export async function prepararDatos() {
   const existe = async (ruta) => (await getDoc(doc(db, ...ruta))).exists();
   const pasos = [
     ["datos del negocio", async () => !(await existe(["config", "tienda"])) && (await setDoc(doc(db, "config", "tienda"), TIENDA_BASE), true)],
-    ["promociones", async () => !(await existe(["config", "promos"])) && (await setDoc(doc(db, "config", "promos"), { lista: PROMOCIONES_BASE }), true)],
+    ["promociones antiguas", async () => (await existe(["config", "promos"])) && (await deleteDoc(doc(db, "config", "promos")), false)], // reemplazadas por Eventos
     ["inventario", async () => {
       if (!(await getDocs(query(collection(db, "inventario"), limit(1)))).empty) return false;
       const b = writeBatch(db); inventarioBase().forEach((i, k) => b.set(doc(collection(db, "inventario")), { ...i, orden: k }));
@@ -98,7 +98,7 @@ export async function prepararDatos() {
 // y se quitan los campos que ya no se usan (calificación y tiempo).
 async function migrarCatalogo() {
   const prods = (await getDocs(collection(db, "productos"))).docs;
-  const viejos = prods.filter((d) => { const p = d.data(); return (p.categoria !== undefined) || p.rating !== undefined || p.minutos !== undefined || (p.categoria === "Combos" && p.tipo !== "combo"); });
+  const viejos = prods.filter((d) => { const p = d.data(); return (p.categoria !== undefined) || p.descuento !== undefined || p.rating !== undefined || p.minutos !== undefined || (p.categoria === "Combos" && p.tipo !== "combo"); });
   if (!viejos.length) return false;
   const cats = (await getDocs(collection(db, "categorias"))).docs.map((d) => ({ id: d.id, ...d.data() }));
   const b = writeBatch(db);
@@ -109,8 +109,9 @@ async function migrarCatalogo() {
     return c.id;
   };
   viejos.forEach((d) => {
-    const p = d.data(), cambios = { rating: deleteField(), minutos: deleteField(), categoria: deleteField() };
-    if (p.tipo === "combo" || p.categoria === "Combos") Object.assign(cambios, { tipo: "combo", incluye: incluyeDe(p), precio: Math.round(precioFinal(p) / 100) * 100, descuento: 0, receta: deleteField() });
+    // el descuento propio de cada producto se elimina: ahora los descuentos son eventos
+    const p = d.data(), cambios = { rating: deleteField(), minutos: deleteField(), categoria: deleteField(), descuento: deleteField() };
+    if (p.tipo !== "combo" && p.categoria === "Combos") Object.assign(cambios, { tipo: "combo", incluye: incluyeDe(p), precio: Math.round(aplicarDescuento(p.precio, p.descuento) / 100) * 100, receta: deleteField() });
     else if (p.categoria && !p.categoriaId) cambios.categoriaId = idCategoria(p.categoria);
     b.update(d.ref, cambios);
   });

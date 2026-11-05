@@ -238,3 +238,11 @@ td.ajuste button:disabled{opacity:.35;cursor:not-allowed}
 .cargando span{font-size:3rem;animation:avanza 1.2s ease-in-out infinite alternate}
 .cargando[hidden]{display:none}
 @keyframes avanza{from{transform:translateX(-24px)}to{transform:translateX(24px)}}
+
+/* ===== Eventos ===== */
+.interruptor{position:relative;width:46px;height:26px;padding:0;border:0;border-radius:999px;background:#d6d1c4;cursor:pointer;transition:background .25s}
+.interruptor i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.2);transition:transform .25s}
+.interruptor[aria-checked="true"]{background:var(--verde2)}
+.interruptor[aria-checked="true"] i{transform:translateX(20px)}
+.ev-mini{display:inline-block;padding:0 6px;border-radius:999px;background:var(--naranja);color:#fff;font-size:.7rem;font-weight:800}
+.sub-texto{display:block;color:var(--gris);font-size:.8rem;font-weight:400}

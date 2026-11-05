@@ -1,9 +1,8 @@
 // Hoja de detalle de un producto: imagen grande, descripción, qué incluye, cantidad y nota para la cocina.
 import { $, esc, dinero } from "../../shared/util.js";
 import { doc, getDoc } from "../../shared/firebase.js";
-import { precioFinal } from "../../shared/dominio.js";
-import { producto, esCombo, sumaSeparado, disponibles, agotado, categoriaDe } from "../../shared/catalogo.js";
-import { S, db, nombreDe } from "./estado.js";
+import { producto, precioFinal, descuentoDe, esCombo, sumaSeparado, disponibles, agotado, categoriaDe } from "../../shared/catalogo.js";
+import { S, db, en, nombreDe } from "./estado.js";
 import { agregar } from "./carrito.js";
 import { aviso } from "./ui.js";
 
@@ -17,18 +16,19 @@ async function imagenGrande(p, img) {
 }
 export function abrirDetalle(id) {
   const p = producto(id); if (!p) return;
-  const item = S.carrito.find((i) => i.id === p.id), d = disponibles(p.id), ag = agotado(p), pf = precioFinal(p);
+  const item = S.carrito.find((i) => i.id === p.id), d = disponibles(p.id), ag = agotado(p), pf = precioFinal(p), ev = descuentoDe(p);
   let cant = 1;
   const dlg = $("#dlgProducto");
   dlg.innerHTML = `<form method="dialog" class="hoja-cont">
     <button class="btn-icono cerrar-hoja" type="button" data-cerrar aria-label="Cerrar">✕</button>
-    <div class="hoja-img">${p.imagen ? `<img src="${p.imagen}" alt="${esc(p.nombre)}">` : `<span aria-hidden="true">${esc(p.emoji)}</span>`}${p.descuento ? `<span class="etiqueta-desc">-${p.descuento}%</span>` : ""}</div>
+    <div class="hoja-img">${p.imagen ? `<img src="${p.imagen}" alt="${esc(p.nombre)}">` : `<span aria-hidden="true">${esc(p.emoji)}</span>`}${ev ? `<span class="etiqueta-desc">-${ev.porcentaje}%</span>` : ""}</div>
     <div class="hoja-cuerpo">
       <p class="hoja-cat">${esCombo(p) ? "🍱 Combo" : esc((categoriaDe(p)?.emoji || "") + " " + (categoriaDe(p)?.nombre || ""))}</p>
       <h2>${esc(p.nombre)}</h2>
+      ${ev ? `<p class="hoja-evento">🎉 <b>${esc(ev.nombre)}</b>: ${ev.porcentaje}% de descuento${ev.hasta ? ` hasta el ${new Date(ev.hasta).toLocaleString("es-CO", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}` : ""}</p>` : ""}
       ${p.descripcion ? `<p class="hoja-desc">${esc(p.descripcion)}</p>` : ""}
       ${esCombo(p) ? `<div class="hoja-incluye"><b>Incluye</b><ul>${p.incluye.map((i) => `<li><span>${i.cant}×</span> ${esc(nombreDe(i.id))}</li>`).join("")}</ul>${sumaSeparado(p.incluye) > p.precio ? `<span class="ahorro">Ahorras ${dinero(sumaSeparado(p.incluye) - p.precio)} frente a pedirlos por separado</span>` : ""}</div>` : ""}
-      <p class="hoja-precio">${p.descuento ? `<s>${dinero(p.precio)}</s>` : ""}${dinero(pf)}${d !== null && d <= 5 && !ag ? `<small>${d === 1 ? "¡Última unidad!" : `Quedan ${d}`}</small>` : ""}</p>
+      <p class="hoja-precio">${ev ? `<s>${dinero(p.precio)}</s>` : ""}${dinero(pf)}${d !== null && d <= 5 && !ag ? `<small>${d === 1 ? "¡Última unidad!" : `Quedan ${d}`}</small>` : ""}</p>
       <label class="hoja-nota"><span>Indicaciones para la cocina <small>(opcional)</small></span><textarea name="nota" rows="2" maxlength="120" placeholder="Ej. sin cebolla, salsa aparte">${esc(item?.nota || "")}</textarea></label>
     </div>
     <footer class="hoja-pie">
@@ -50,5 +50,6 @@ export function abrirDetalle(id) {
   imagenGrande(p, $(".hoja-img img", dlg) || document.createElement("img"));
 }
 export function iniciarDetalle() {
+  en("abrirDetalle", (id) => abrirDetalle(+id));
   document.addEventListener("click", (e) => { const t = e.target.closest("[data-abrir]"); if (t) abrirDetalle(+t.dataset.abrir); });
 }

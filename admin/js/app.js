@@ -20,9 +20,10 @@ import categorias from "./vistas/categorias.js";
 import inventario from "./vistas/inventario.js";
 import clientes from "./vistas/clientes.js";
 import apariencia from "./vistas/apariencia.js";
+import eventos from "./vistas/eventos.js";
 import config from "./vistas/config.js";
 
-const VISTAS = [inicio, pedidos, reclamos, ventas, facturas, productos, combos, categorias, inventario, clientes, apariencia, config];
+const VISTAS = [inicio, pedidos, reclamos, ventas, facturas, productos, combos, categorias, eventos, inventario, clientes, apariencia, config];
 const vistaActual = () => VISTAS.find((v) => v.id === location.hash.slice(1)) || inicio;
 
 /* ===== RENDER ===== */

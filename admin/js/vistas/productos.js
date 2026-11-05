@@ -1,5 +1,5 @@
 import { esc, dinero } from "../../../shared/util.js";
-import { PRODUCTOS, RECETAS, INVENTARIO, CATEGORIAS, esCombo, categoriaDe, combosQueUsan, recetaADoc } from "../../../shared/catalogo.js";
+import { PRODUCTOS, RECETAS, INVENTARIO, CATEGORIAS, esCombo, categoriaDe, combosQueUsan, recetaADoc, descuentoDe } from "../../../shared/catalogo.js";
 import { coincide } from "../estado.js";
 import { tabla, campo, mini, editor, campoImagen, leerImagen, aviso, fallo } from "../ui.js";
 import { guardarProducto, eliminarProductos, nuevoId } from "../servicios.js";
@@ -16,8 +16,9 @@ function editar(id) {
   editor(id ? "Editar producto" : "Nuevo producto", `
     ${campo("Nombre", "nombre", e.nombre, "text", "required maxlength=\"60\"")}
     <label>Descripción<textarea name="descripcion" rows="2" maxlength="220">${esc(e.descripcion)}</textarea></label>
-    <div class="dos-col">${campo("Precio (COP)", "precio", e.precio, "number", 'required min="1" step="1" inputmode="numeric"')}${campo("Descuento (%)", "descuento", e.descuento || 0, "number", 'min="0" max="90" step="1" inputmode="numeric"')}</div>
-    <div class="dos-col"><label>Categoría<select name="categoriaId" required>${CATEGORIAS.map((c) => `<option value="${c.id}" ${c.id === catActual ? "selected" : ""}>${esc(c.emoji)} ${esc(c.nombre)}</option>`).join("")}</select></label>${emojiCampo(e.emoji || "🍽️")}</div>
+    <div class="dos-col">${campo("Precio (COP)", "precio", e.precio, "number", 'required min="1" step="1" inputmode="numeric"')}${emojiCampo(e.emoji || "🍽️")}</div>
+    <label>Categoría<select name="categoriaId" required>${CATEGORIAS.map((c) => `<option value="${c.id}" ${c.id === catActual ? "selected" : ""}>${esc(c.emoji)} ${esc(c.nombre)}</option>`).join("")}</select></label>
+    <p class="nota">Para ponerle descuento, crea un evento en la sección <b>Eventos</b>.</p>
     ${campoImagen(e)}
     <p class="nota"><b>Receta:</b> insumos que gasta una unidad. Con esto se calcula cuántas unidades se pueden preparar.</p>
     <div id="recetas">${(RECETAS[id] || []).map(([k, c]) => filaReceta(k, c)).join("")}</div>
@@ -26,7 +27,7 @@ function editar(id) {
     let img; try { img = await leerImagen(fd, e.imagen); } catch (err) { return err.message; }
     const pid = e.id || nuevoId(PRODUCTOS), cs = fd.getAll("rc");
     const receta = fd.getAll("rk").map((k, i) => [k, +cs[i]]).filter(([, c]) => c > 0);
-    await guardarProducto({ id: pid, nombre: fd.get("nombre").trim(), descripcion: fd.get("descripcion").trim(), precio: +fd.get("precio"), descuento: +fd.get("descuento") || 0, categoriaId: fd.get("categoriaId"), emoji: fd.get("emoji") || "🍽️", imagenGrande: e.imagenGrande, receta: recetaADoc(receta) }, img);
+    await guardarProducto({ id: pid, nombre: fd.get("nombre").trim(), descripcion: fd.get("descripcion").trim(), precio: +fd.get("precio"), categoriaId: fd.get("categoriaId"), emoji: fd.get("emoji") || "🍽️", imagenGrande: e.imagenGrande, receta: recetaADoc(receta) }, img);
     return true;
   });
 }
@@ -36,7 +37,7 @@ export default {
   render() {
     const todos = lista();
     const usadas = [["todas", "Todas"], ...CATEGORIAS.filter((c) => todos.some((p) => categoriaDe(p)?.id === c.id)).map((c) => [c.id, `${esc(c.emoji)} ${esc(c.nombre)}`])];
-    const filas = todos.filter((p) => (cat === "todas" || categoriaDe(p)?.id === cat) && coincide(p.nombre, categoriaDe(p)?.nombre)).map((p) => `<tr><td>${mini(p)}</td><td><b>${esc(p.nombre)}</b></td><td>${esc(categoriaDe(p)?.nombre ?? "Sin categoría")}</td><td>${dinero(p.precio)}${p.descuento ? ` <span class="est e1">-${p.descuento}%</span>` : ""}</td><td>${vendidos(p)}</td><td>${dispTxt(p)}</td><td>${estadoStock(p)}</td><td class="acc"><button data-a="editar" data-id="${p.id}">Editar</button><button class="peli" data-a="eliminar" data-id="${p.id}">Eliminar</button></td></tr>`);
+    const filas = todos.filter((p) => (cat === "todas" || categoriaDe(p)?.id === cat) && coincide(p.nombre, categoriaDe(p)?.nombre)).map((p) => `<tr><td>${mini(p)}</td><td><b>${esc(p.nombre)}</b></td><td>${esc(categoriaDe(p)?.nombre ?? "Sin categoría")}</td><td>${dinero(p.precio)}${descuentoDe(p) ? ` <span class="est e1" title="${esc(descuentoDe(p).nombre)}">🎉 -${descuentoDe(p).porcentaje}%</span>` : ""}</td><td>${vendidos(p)}</td><td>${dispTxt(p)}</td><td>${estadoStock(p)}</td><td class="acc"><button data-a="editar" data-id="${p.id}">Editar</button><button class="peli" data-a="eliminar" data-id="${p.id}">Eliminar</button></td></tr>`);
     // Sin categorías no se pueden crear productos, pero los que ya existen se siguen mostrando
     const alertaCat = !CATEGORIAS.length ? `<p class="alerta">ℹ️ Para crear productos primero necesitas al menos una categoría. <a href="#categorias">Crear categoría →</a></p>` : "";
     return `${alertaCat}<section class="caja"><div class="cab"><h2>Productos (${todos.length})</h2><button class="btn" data-a="nuevo">＋ Añadir producto</button></div>
