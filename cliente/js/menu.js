@@ -88,7 +88,7 @@ export function pintarMenu() {
   info.textContent = `${PRODUCTOS.length} productos`;
   cont.innerHTML = lista.map(htmlSeccion).join("");
   $$(".fila").forEach(actualizarFlechas);
-  observarSecciones();
+  alDesplazarMenu();
 }
 
 /* ===== Navegación ===== */
@@ -96,19 +96,33 @@ const altoCabecera = () => $(".top").offsetHeight + $("#categorias").offsetHeigh
 export function irASeccion(id) {
   if (S.vista.tipo !== "inicio" || S.texto) { S.vista = { tipo: "inicio" }; S.texto = ""; $("#buscar").value = ""; pintarMenu(); }
   const el = $(`#sec-${CSS.escape(id)}`); if (!el) return $("#menu").scrollIntoView({ behavior: "smooth" });
+  marcarChip(id); pausaResaltado = Date.now() + 1000; // mientras dura el desplazamiento no se cambia el resaltado
   scrollTo({ top: el.getBoundingClientRect().top + scrollY - altoCabecera(), behavior: "smooth" });
 }
 function verTodo(id) { S.vista = { tipo: "categoria", cat: id }; pintarMenu(); scrollTo({ top: $("#menu").getBoundingClientRect().top + scrollY - $(".top").offsetHeight, behavior: "smooth" }); }
 // Resalta en la barra de categorías la sección que se está viendo
-let observador;
-function observarSecciones() {
-  observador?.disconnect();
-  observador = new IntersectionObserver((es) => es.forEach((x) => {
-    if (!x.isIntersecting) return;
-    $$("#categorias .chip").forEach((c) => c.setAttribute("aria-pressed", c.dataset.secIr === x.target.dataset.sec));
-    $(`#categorias .chip[aria-pressed="true"]`)?.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
-  }), { rootMargin: "-45% 0px -50% 0px" });
-  $$(".seccion[data-sec]").forEach((s) => observador.observe(s));
+let pausaResaltado = 0;
+function marcarChip(id) {
+  const chips = $$("#categorias .chip"), activo = chips.find((c) => c.dataset.secIr === id);
+  if (!activo || activo.getAttribute("aria-pressed") === "true") return;
+  chips.forEach((c) => c.setAttribute("aria-pressed", c === activo));
+  activo.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+}
+function seccionVisible() {
+  const secs = $$(".seccion[data-sec]"); if (!secs.length) return null;
+  const linea = altoCabecera() + 40; let actual = secs[0];
+  secs.forEach((s) => { if (s.getBoundingClientRect().top <= linea) actual = s; });
+  // La última sección puede no llegar arriba porque se acaba la página: si ya se ve, se marca
+  const ultima = secs[secs.length - 1], r = ultima.getBoundingClientRect();
+  const alFinal = innerHeight + scrollY >= document.documentElement.scrollHeight - 4;
+  if (r.top < innerHeight * .75 && (alFinal || r.bottom <= innerHeight)) actual = ultima;
+  return actual.dataset.sec;
+}
+let pendienteSpy = false;
+function alDesplazarMenu() {
+  if (pendienteSpy || S.vista.tipo !== "inicio" || S.texto || Date.now() < pausaResaltado) return;
+  pendienteSpy = true;
+  requestAnimationFrame(() => { pendienteSpy = false; const id = seccionVisible(); if (id) marcarChip(id); });
 }
 function actualizarFlechas(fila) {
   const w = fila.closest(".fila-wrap"); if (!w) return;
@@ -150,6 +164,7 @@ export function iniciarMenu() {
     if (d.mover) { const f = $(".fila", t.closest(".fila-wrap")); f.scrollBy({ left: +d.mover * f.clientWidth * .85, behavior: "smooth" }); }
   });
   document.addEventListener("scroll", (e) => { if (e.target.classList?.contains("fila")) actualizarFlechas(e.target); }, { capture: true, passive: true });
+  addEventListener("scroll", alDesplazarMenu, { passive: true });
   let espera;
   $("#buscar").oninput = (e) => { clearTimeout(espera); espera = setTimeout(() => { S.texto = e.target.value.toLowerCase().trim(); pintarMenu(); if (S.texto) $("#menu").scrollIntoView({ behavior: "smooth" }); }, 180); };
   en("catalogo", (tipo) => {

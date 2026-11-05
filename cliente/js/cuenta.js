@@ -1,12 +1,14 @@
 // Sesión (Firebase Authentication), registro, perfil y compra de FoW Prime.
 import { $, fecha } from "../../shared/util.js";
-import { doc, collection, setDoc, updateDoc, addDoc, onSnapshot, query, where, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updatePassword, errorAuth } from "../../shared/firebase.js";
+import { doc, collection, setDoc, updateDoc, getDocs, onSnapshot, query, where, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updatePassword, errorAuth } from "../../shared/firebase.js";
 import { ordenFecha, codigoPedido, etiquetaCliente } from "../../shared/dominio.js";
 import { S, db, auth, emitir, primeActivo, bloqueado, AVISO_BLOQ } from "./estado.js";
+import { crearMembresia, abrirFacturaSuscripcion } from "../../shared/pedidos.js";
+import { TIENDA } from "../../shared/catalogo.js";
 import { aviso, acceso, pedirAcceso } from "./ui.js";
 import { leerLocal, guardarCarrito } from "./carrito.js";
 
-let registrando = false; // evita confundir "cuenta recién creada" con "cuenta eliminada"
+let registrando = false, recuperando = false; // evita confundir "cuenta recién creada" con "cuenta sin datos"
 let quitar = [];
 
 function abrirPerfil(enfocarDireccion = false) {
@@ -14,6 +16,10 @@ function abrirPerfil(enfocarDireccion = false) {
   f.nombre.value = c.nombre; f.telefono.value = c.telefono; f.correo.value = c.correo; f.direccion.value = c.direccion || ""; f.clave.value = "";
   $("#errPerfil").textContent = ""; $("#avatar").textContent = c.nombre.trim()[0].toUpperCase();
   $("#estadoPrime").textContent = primeActivo() ? "Miembro FoW Prime" + (c.vence ? " hasta el " + fecha(c.vence) : "") : "Sin membresía Prime";
+  // Factura de la suscripción (solo si alguna vez compró Prime)
+  let btn = $("#btnFacturaPrime");
+  if (!btn) { $("#estadoPrime").insertAdjacentHTML("afterend", '<button class="enlace" type="button" id="btnFacturaPrime" hidden>🧾 Ver factura de mi suscripción</button>'); btn = $("#btnFacturaPrime"); btn.onclick = verFacturaPrime; }
+  btn.hidden = !c.prime;
   $("#dlgPerfil").showModal();
   if (enfocarDireccion) f.direccion.focus();
 }
@@ -21,7 +27,9 @@ function pintarSesion() {
   const c = S.cliente;
   $("#btnCuenta").textContent = c ? c.nombre.trim()[0].toUpperCase() : "👤";
   $("#btnCuenta2").firstChild.textContent = c ? "🙂" : "👤";
-  $("#btnDir").textContent = "📍 " + (c?.direccion || (c ? "Agrega tu dirección" : "¿Dónde te lo llevamos?"));
+  const dir = c?.direccion || (c ? "Agrega tu dirección" : "¿Dónde te lo llevamos?");
+  $("#btnDir").innerHTML = `<span aria-hidden="true">📍</span><span class="dir-txt"></span>`;
+  $("#btnDir .dir-txt").textContent = dir; $("#btnDir").title = $("#btnDir").ariaLabel = "Dirección de entrega: " + dir;
 }
 
 /* onAuthStateChanged se ejecuta al abrir la página (si ya había sesión) y cada vez que se entra o se sale */
@@ -30,7 +38,16 @@ function alCambiarSesion(user) {
   if (!user) { S.cliente = null; S.pedidos = []; S.reclamos = {}; S.carrito = leerLocal(); pintarSesion(); emitir("sesion"); emitir("carrito"); return; }
   let primera = true;
   quitar.push(onSnapshot(doc(db, "usuarios", user.uid), async (d) => { // mis datos y mi carrito, en vivo
-    if (!d.exists()) { if (registrando) return; await signOut(auth); aviso("Tu cuenta ya no existe."); return; }
+    if (!d.exists()) { // cuenta sin datos (borrados con la antigua opción «Eliminar»): se recupera
+      if (registrando || recuperando) return;
+      recuperando = true;
+      try {
+        await setDoc(doc(db, "usuarios", user.uid), { nombre: user.email.split("@")[0], telefono: "", correo: user.email, direccion: "", prime: false, bloqueado: false, carrito: [], creado: new Date().toISOString(), recuperada: true });
+        aviso("Recuperamos tu cuenta. Completa tus datos en tu perfil.");
+        acceso.siguiente = () => abrirPerfil();
+      } catch { await signOut(auth); aviso("No se pudo recuperar tu cuenta. Contacta al restaurante."); }
+      recuperando = false; return;
+    }
     S.cliente = { uid: user.uid, ...d.data() };
     S.carrito = S.cliente.carrito || [];
     if (primera) {
@@ -52,6 +69,15 @@ function alCambiarSesion(user) {
   quitar.push(onSnapshot(query(collection(db, "reclamos"), where("uid", "==", user.uid)), (snap) => {
     S.reclamos = Object.fromEntries(snap.docs.map((x) => [x.data().pedidoId, x.data()])); emitir("pedidos");
   }));
+}
+
+// Abre la factura de la última suscripción del cliente
+async function verFacturaPrime() {
+  try {
+    const subs = (await getDocs(query(collection(db, "membresias"), where("uid", "==", S.cliente.uid)))).docs.map((d) => ({ _id: d.id, ...d.data() }));
+    const ultima = subs.sort((a, b) => b.fecha.localeCompare(a.fecha))[0];
+    ultima ? abrirFacturaSuscripcion(ultima, TIENDA) : aviso("No encontramos facturas de tu suscripción.");
+  } catch { aviso("No se pudo cargar la factura. Intenta de nuevo."); }
 }
 
 /* ===== Prime (pago de demostración: no se cobra ni se guarda ningún dato de tarjeta) ===== */
@@ -104,10 +130,13 @@ export function iniciarCuenta() {
   $("#formPrime").onsubmit = async (e) => {
     e.preventDefault();
     const f = e.target, pl = PLANES[f.plan.value], ahora = new Date(), vence = new Date(ahora.getTime() + pl[2] * 864e5).toISOString();
+    const btn = f.querySelector("[type=submit]"); btn.disabled = true;
     try {
+      // La suscripción queda registrada con número de factura propio (SUS-0001…)
+      await crearMembresia(db, { uid: S.cliente.uid, fecha: ahora.toISOString(), desde: ahora.toISOString(), vence, correo: S.cliente.correo, nombre: S.cliente.nombre, telefono: S.cliente.telefono || "", plan: pl[0], dias: pl[2], precio: pl[1], metodo: f.metodo.value });
       await updateDoc(doc(db, "usuarios", S.cliente.uid), { prime: true, plan: pl[0], vence });
-      await addDoc(collection(db, "membresias"), { uid: S.cliente.uid, fecha: ahora.toISOString(), correo: S.cliente.correo, nombre: S.cliente.nombre, plan: pl[0], precio: pl[1], metodo: f.metodo.value });
-      f.reset(); $("#dlgPrime").close(); aviso("¡Bienvenido a FoW Prime!");
+      f.reset(); $("#dlgPrime").close(); aviso("¡Bienvenido a FoW Prime! Tu factura está en tu perfil.");
     } catch { aviso("No se pudo activar Prime. Intenta de nuevo."); }
+    btn.disabled = false;
   };
 }

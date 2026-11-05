@@ -95,7 +95,7 @@ function iniciarEscuchas() {
     if (!recIniciales && s.docChanges().some((c) => c.type === "added")) aviso("Llegó un reclamo nuevo");
     if (!s.metadata.fromCache) recIniciales = false;
   });
-  escuchar(collection(db, "membresias"), (s) => { S.membresias = s.docs.map((x) => x.data()); });
+  escuchar(collection(db, "membresias"), (s) => { S.membresias = s.docs.map((x) => ({ _id: x.id, ...x.data() })); });
   escuchar(query(collection(db, "historial"), orderBy("f", "desc"), limit(500)), (s) => { S.historial = s.docs.map((x) => x.data()); });
 }
 let catalogoEscuchado = false;

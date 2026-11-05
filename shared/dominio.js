@@ -29,6 +29,8 @@ export const textoAccion = (p, e) => p.entrega === "recoger" ? ({ listo: "Listo 
 const numero = (id) => id > 99999 ? String(id).slice(-4) : String(id).padStart(4, "0");
 export const codigoPedido = (id) => "#FOW-" + numero(id);
 export const codigoFactura = (id) => "FAC-" + numero(id);
+// Facturas de FoW Prime: consecutivo propio. Las suscripciones anteriores a este cambio no tenían número.
+export const codigoSuscripcion = (m) => "SUS-" + (m.numero ? String(m.numero).padStart(4, "0") : String(m._id || "").slice(0, 6).toUpperCase());
 export const ordenFecha = (a, b) => new Date(a.fecha) - new Date(b.fecha);
 
 /* ===== RECLAMOS ===== */

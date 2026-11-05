@@ -45,7 +45,7 @@ service cloud.firestore {
                     && request.resource.data.correo == request.auth.token.email;
       // El cliente edita sus datos y su carrito, pero NO puede desbloquearse ni cambiar su correo.
       allow update: if esAdmin() || (soyYo(uid) && !cambia().hasAny(['bloqueado', 'correo']));
-      allow delete: if esAdmin();
+      allow delete: if false;   // las cuentas no se eliminan: se bloquean (los pedidos conservan a su dueño)
     }
 
     // Contador de pedidos: solo puede subir de 1 en 1
@@ -90,9 +90,12 @@ service cloud.firestore {
       allow update, delete: if esAdmin();
     }
 
+    // Suscripciones FoW Prime: número consecutivo (SUS-0001…); cada cliente ve las suyas para descargar su factura
     match /membresias/{id} {
-      allow read: if esAdmin();
-      allow create: if logueado() && request.resource.data.uid == request.auth.uid && noBloqueado();
+      allow read: if esAdmin() || (logueado() && resource.data.uid == request.auth.uid);
+      allow create: if logueado() && request.resource.data.uid == request.auth.uid && noBloqueado()
+                    && request.resource.data.numero == getAfter(/databases/$(database)/documents/contadores/membresias).data.n
+                    && id == string(request.resource.data.numero);
     }
 
     // Catálogo: lo ve cualquiera (también visitantes), solo el admin lo modifica.

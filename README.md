@@ -61,7 +61,9 @@ Abre la carpeta en VS Code y usa Live Server (los archivos son módulos: no func
 | `config/tienda` | datos del negocio, costo del domicilio y % de Prime |
 | `eventos/{id}` | descuentos (% a un producto o a una categoría), encendidos a mano y con fechas opcionales |
 | `config/banner` | banner del inicio |
-| `historial`, `membresias` | movimientos de inventario y membresías vendidas |
+| `membresias/{n}` | suscripciones FoW Prime vendidas, con número de factura propio (SUS-0001…) |
+| `contadores/membresias` | último número de suscripción |
+| `historial` | movimientos de inventario |
 
 ## Reglas de negocio
 - **Pedidos:** el admin solo avanza al paso siguiente o cancela con motivo; un pedido entregado o cancelado ya no cambia. El cliente puede cancelar mientras está pendiente.
@@ -69,7 +71,8 @@ Abre la carpeta en VS Code y usa Live Server (los archivos son módulos: no func
 - **Combos:** se arman con productos y cantidades, tienen precio fijo y se agotan cuando alguno de sus productos no alcanza.
 - **Eventos:** son la única forma de dar descuento. Aplican un % a un producto o a una categoría; si varios aplican al mismo producto, gana el mayor. Funcionan si están encendidos y, si tienen fechas, solo dentro del rango (se activan y apagan solos, sin recargar). FoW Prime es una regla global (Configuración) que se aplica sobre el subtotal, además de los eventos.
 - **Reclamos:** hasta 24 horas después de la entrega, con foto. El reembolso se registra; el dinero se devuelve a mano.
-- **Facturas:** una por pedido entregado, imprimible o guardable como PDF (admin y cliente).
+- **Facturas:** dos subsecciones en el admin. *Pedidos*: una por pedido entregado (FAC-0001…). *Suscripciones*: una por cada compra de FoW Prime (SUS-0001…). Todas se imprimen o guardan como PDF; el cliente ve las suyas en «Mis pedidos» y en su perfil.
+- **Clientes:** no se eliminan, se bloquean (así sus pedidos y facturas conservan a su dueño). Si una cuenta quedó sin datos por la antigua opción «Eliminar», al iniciar sesión se recupera y se le pide completar su perfil.
 - **Escalabilidad:** el admin carga solo los pedidos de los últimos 60 días (ampliable desde Facturas) para no agotar las lecturas del plan Spark.
 
 ## Limitaciones conocidas

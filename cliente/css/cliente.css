@@ -431,3 +431,13 @@ dialog.hoja{width:min(560px,100%);max-height:94vh;overflow:hidden;border-radius:
 .ev-mini{display:inline-block;padding:0 6px;border-radius:999px;background:var(--naranja);color:#fff;font-size:.7rem;font-weight:800}
 .item s.antes{color:var(--gris);font-size:.8rem}
 .hoja-evento{padding:10px 14px;border-radius:12px;background:#ffe9d9;color:#b84a0a;font-size:.9rem}
+
+/* ===== Correcciones responsive ===== */
+.dir{display:inline-flex;align-items:center;gap:4px;min-width:0}
+.dir-txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.categorias::after{content:"";flex:0 0 4px} /* deja aire después del último chip */
+@media (max-width:699px){
+  /* En el celular la dirección es un botón redondo como los demás (antes su texto empujaba los íconos) */
+  .dir{justify-self:end;width:44px;height:44px;padding:0;justify-content:center;border-radius:50%;background:#fff;box-shadow:var(--sombra);font-size:1.1rem}
+  .dir-txt{display:none}
+}

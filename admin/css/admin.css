@@ -246,3 +246,11 @@ td.ajuste button:disabled{opacity:.35;cursor:not-allowed}
 .interruptor[aria-checked="true"] i{transform:translateX(20px)}
 .ev-mini{display:inline-block;padding:0 6px;border-radius:999px;background:var(--naranja);color:#fff;font-size:.7rem;font-weight:800}
 .sub-texto{display:block;color:var(--gris);font-size:.8rem;font-weight:400}
+
+/* ===== Correcciones responsive: textos largos (correos, nombres) se parten en vez de desbordar la página ===== */
+td,.det,.reclamo p,.reclamo header{overflow-wrap:anywhere}
+@media(max-width:700px){
+  .tabla td{min-width:0}
+  .tabla td[data-label]::before{max-width:45%}
+  .tabla td.acc{flex-wrap:wrap}
+}
