@@ -9,7 +9,10 @@
 <link rel="stylesheet" href="css/admin.css">
 </head>
 <body>
-<section class="login" id="login">
+<!-- Se ve mientras Firebase recupera la sesión guardada (antes se veía el login y parecía pedirlo de nuevo) -->
+<div class="cargando" id="cargando" role="status"><span aria-hidden="true">🛵</span><p>Cargando panel…</p></div>
+
+<section class="login" id="login" hidden>
   <form id="formLogin" class="tarjeta-login">
     <svg class="rueda grande" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="M12 3v7M12 14v7M3 12h7M14 12h7M5.6 5.6l5 5M13.4 13.4l5 5M18.4 5.6l-5 5M10.6 13.4l-5 5"/></svg>
     <h1>Food on Wheels</h1>

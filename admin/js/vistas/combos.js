@@ -52,7 +52,7 @@ export default {
     editar: (d) => editar(+d.id),
     async eliminar(d) {
       if (!confirm("¿Eliminar este combo? Desaparece del menú del cliente.")) return;
-      try { await eliminarProductos([+d.id]); aviso("Combo eliminado"); } catch { fallo(); }
+      try { await eliminarProductos([+d.id]); aviso("Combo eliminado"); } catch (e) { fallo(e); }
     },
     agregarProducto: () => { $("#itemsCombo").insertAdjacentHTML("beforeend", fila()); resumen(); },
     quitarFila: (d, btn) => { btn.closest(".fila-receta").remove(); resumen(); }

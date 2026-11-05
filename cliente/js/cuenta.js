@@ -46,7 +46,8 @@ function alCambiarSesion(user) {
     const antes = Object.fromEntries(S.pedidos.map((p) => [p.id, p.estado]));
     S.pedidos = snap.docs.map((x) => x.data()).sort(ordenFecha).reverse();
     if (!iniciales) S.pedidos.forEach((p) => { if (antes[p.id] && antes[p.id] !== p.estado) aviso(`Pedido ${codigoPedido(p.id)}: ${etiquetaCliente(p)}`); });
-    iniciales = false; emitir("pedidos");
+    if (!snap.metadata.fromCache) iniciales = false; // la caché local responde primero
+    emitir("pedidos");
   }));
   quitar.push(onSnapshot(query(collection(db, "reclamos"), where("uid", "==", user.uid)), (snap) => {
     S.reclamos = Object.fromEntries(snap.docs.map((x) => [x.data().pedidoId, x.data()])); emitir("pedidos");

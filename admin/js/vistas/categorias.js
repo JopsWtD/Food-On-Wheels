@@ -40,7 +40,7 @@ export default {
       const c = CATEGORIAS.find((x) => x.id === d.id), n = productosDeCategoria(c.id).length;
       if (n) return alert(`«${c.nombre}» tiene ${n} producto${n > 1 ? "s" : ""}. Muévelos a otra categoría o elimínalos antes.`);
       if (!confirm(`¿Eliminar la categoría «${c.nombre}»?`)) return;
-      try { await borrar("categorias", c.id); aviso("Categoría eliminada"); } catch { fallo(); }
+      try { await borrar("categorias", c.id); aviso("Categoría eliminada"); } catch (e) { fallo(e); }
     }
   }
 };

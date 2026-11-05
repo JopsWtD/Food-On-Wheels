@@ -7,7 +7,7 @@ import { escucharCatalogo } from "../../shared/catalogo.js";
 import { ordenFecha } from "../../shared/dominio.js";
 import { haceDias } from "../../shared/util.js";
 import { S, db, auth, ganchos } from "./estado.js";
-import { aviso, contarNumeros } from "./ui.js";
+import { aviso, contarNumeros, mensajeError } from "./ui.js";
 import { prepararDatos } from "./servicios.js";
 import inicio from "./vistas/inicio.js";
 import pedidos from "./vistas/pedidos.js";
@@ -80,7 +80,8 @@ function escucharPedidos() { // solo los pedidos de los últimos S.diasPedidos d
   quitarPedidos = onSnapshot(query(collection(db, "pedidos"), where("fecha", ">=", haceDias(S.diasPedidos))), (s) => {
     S.pedidos = s.docs.map((x) => x.data()).sort(ordenFecha);
     if (!iniciales && s.docChanges().some((c) => c.type === "added")) aviso("Llegó un pedido nuevo");
-    iniciales = false; pedirRender();
+    if (!s.metadata.fromCache) iniciales = false; // la caché local responde primero: solo se avisa lo que llegue después del servidor
+    pedirRender();
   }, (err) => console.error(err));
 }
 ganchos.ampliarPedidos = (dias) => { S.diasPedidos += dias; escucharPedidos(); aviso(`Mostrando los últimos ${S.diasPedidos} días`); };
@@ -91,7 +92,7 @@ function iniciarEscuchas() {
   escuchar(collection(db, "reclamos"), (s) => {
     S.reclamos = s.docs.map((x) => x.data());
     if (!recIniciales && s.docChanges().some((c) => c.type === "added")) aviso("Llegó un reclamo nuevo");
-    recIniciales = false;
+    if (!s.metadata.fromCache) recIniciales = false;
   });
   escuchar(collection(db, "membresias"), (s) => { S.membresias = s.docs.map((x) => x.data()); });
   escuchar(query(collection(db, "historial"), orderBy("f", "desc"), limit(500)), (s) => { S.historial = s.docs.map((x) => x.data()); });
@@ -101,21 +102,23 @@ let catalogoEscuchado = false;
 /* ===== SESIÓN =====
    Un admin es una cuenta de Authentication con un documento en la colección "admins". */
 $("#formLogin").onsubmit = async (e) => {
-  e.preventDefault(); const f = e.target, btn = f.querySelector("[type=submit]"); btn.disabled = true;
+  e.preventDefault(); const f = e.target, btn = f.querySelector("[type=submit]");
+  btn.disabled = true; btn.textContent = "Entrando…";
   try { await signInWithEmailAndPassword(auth, f.correo.value.trim().toLowerCase(), f.clave.value); f.reset(); $("#errLogin").textContent = ""; }
   catch (err) { $("#errLogin").textContent = errorAuth(err); }
-  btn.disabled = false;
+  btn.disabled = false; btn.textContent = "Entrar";
 };
 onAuthStateChanged(auth, async (user) => {
   quitar.forEach((fn) => fn()); quitar = []; quitarPedidos();
-  const mostrar = (app) => { $("#login").hidden = app; $("#app").hidden = !app; };
+  const mostrar = (app) => { $("#cargando").hidden = true; $("#login").hidden = app; $("#app").hidden = !app; };
   if (!user) return mostrar(false);
   let perfil; try { perfil = await getDoc(doc(db, "admins", user.uid)); } catch { perfil = null; }
-  if (!perfil?.exists()) { await signOut(auth); $("#errLogin").textContent = "Esta cuenta no tiene permisos de administrador."; return; }
+  if (!perfil?.exists()) { await signOut(auth); mostrar(false); $("#errLogin").textContent = "Esta cuenta no tiene permisos de administrador."; return; }
   S.nombreAdmin = perfil.data().nombre || user.email;
   $(".usuario b").textContent = S.nombreAdmin;
   $(".usuario .avatar").textContent = S.nombreAdmin.trim()[0].toUpperCase();
-  try { await prepararDatos(); } catch (e) { console.error(e); aviso("No se pudo preparar la configuración inicial."); }
+  // El panel se muestra de inmediato; la preparación de datos corre en segundo plano
   if (!catalogoEscuchado) { catalogoEscuchado = true; escucharCatalogo(db, pedirRender); }
   mostrar(true); render(); iniciarEscuchas();
+  prepararDatos().catch((e) => aviso(`No se pudo preparar: ${(e.pasos || ["datos iniciales"]).join(", ")}. ` + (e.code === "permission-denied" ? "Faltan permisos: publica las reglas nuevas (firestore.rules)." : mensajeError(e))));
 });

@@ -1,7 +1,7 @@
 import { esc, dinero } from "../../../shared/util.js";
 import { PRODUCTOS, RECETAS, INVENTARIO, CATEGORIAS, esCombo, categoriaDe, combosQueUsan, recetaADoc } from "../../../shared/catalogo.js";
 import { coincide } from "../estado.js";
-import { tabla, campo, mini, editor, campoImagen, leerImagen, aviso, fallo, vacioCaja } from "../ui.js";
+import { tabla, campo, mini, editor, campoImagen, leerImagen, aviso, fallo } from "../ui.js";
 import { guardarProducto, eliminarProductos, nuevoId } from "../servicios.js";
 import { vendidos, dispTxt, estadoStock, emojiCampo } from "./comun-catalogo.js";
 
@@ -35,10 +35,11 @@ export default {
   id: "productos", icono: "📦", titulo: "Productos",
   render() {
     const todos = lista();
-    if (!CATEGORIAS.length) return vacioCaja("Productos", "Para crear productos primero necesitas al menos una categoría (por ejemplo «Platos fuertes» o «Bebidas»).", '<a class="btn" href="#categorias">Ir a Categorías</a>');
     const usadas = [["todas", "Todas"], ...CATEGORIAS.filter((c) => todos.some((p) => categoriaDe(p)?.id === c.id)).map((c) => [c.id, `${esc(c.emoji)} ${esc(c.nombre)}`])];
-    const filas = todos.filter((p) => (cat === "todas" || categoriaDe(p)?.id === cat) && coincide(p.nombre, categoriaDe(p)?.nombre)).map((p) => `<tr><td>${mini(p)}</td><td><b>${esc(p.nombre)}</b></td><td>${esc(categoriaDe(p)?.nombre ?? "—")}</td><td>${dinero(p.precio)}${p.descuento ? ` <span class="est e1">-${p.descuento}%</span>` : ""}</td><td>${vendidos(p)}</td><td>${dispTxt(p)}</td><td>${estadoStock(p)}</td><td class="acc"><button data-a="editar" data-id="${p.id}">Editar</button><button class="peli" data-a="eliminar" data-id="${p.id}">Eliminar</button></td></tr>`);
-    return `<section class="caja"><div class="cab"><h2>Productos (${todos.length})</h2><button class="btn" data-a="nuevo">＋ Añadir producto</button></div>
+    const filas = todos.filter((p) => (cat === "todas" || categoriaDe(p)?.id === cat) && coincide(p.nombre, categoriaDe(p)?.nombre)).map((p) => `<tr><td>${mini(p)}</td><td><b>${esc(p.nombre)}</b></td><td>${esc(categoriaDe(p)?.nombre ?? "Sin categoría")}</td><td>${dinero(p.precio)}${p.descuento ? ` <span class="est e1">-${p.descuento}%</span>` : ""}</td><td>${vendidos(p)}</td><td>${dispTxt(p)}</td><td>${estadoStock(p)}</td><td class="acc"><button data-a="editar" data-id="${p.id}">Editar</button><button class="peli" data-a="eliminar" data-id="${p.id}">Eliminar</button></td></tr>`);
+    // Sin categorías no se pueden crear productos, pero los que ya existen se siguen mostrando
+    const alertaCat = !CATEGORIAS.length ? `<p class="alerta">ℹ️ Para crear productos primero necesitas al menos una categoría. <a href="#categorias">Crear categoría →</a></p>` : "";
+    return `${alertaCat}<section class="caja"><div class="cab"><h2>Productos (${todos.length})</h2><button class="btn" data-a="nuevo">＋ Añadir producto</button></div>
       <div class="chips">${usadas.map(([v, t]) => `<button class="chip" data-a="cat" data-v="${v}" aria-pressed="${v === cat}">${t}</button>`).join("")}</div>
       ${tabla(["", "Producto", "Categoría", "Precio", "Vendidos", "Disponibles", "Estado", "Acciones"], filas, "Aún no hay productos. Crea el primero con «Añadir producto».")}
       <p class="nota">«Disponibles» son las unidades que se pueden preparar con el inventario y la receta. «Vendidos» cuenta los pedidos entregados.</p></section>`;
@@ -51,7 +52,7 @@ export default {
       const p = PRODUCTOS.find((x) => x.id === +d.id), usan = combosQueUsan(p.id);
       if (usan.length) return alert(`«${p.nombre}» está en ${usan.length === 1 ? "el combo" : "los combos"}: ${usan.map((c) => c.nombre).join(", ")}.\nQuítalo de ahí antes de eliminarlo.`);
       if (!confirm(`¿Eliminar «${p.nombre}»? Desaparece del menú del cliente.`)) return;
-      try { await eliminarProductos([p.id]); aviso("Producto eliminado"); } catch { fallo(); }
+      try { await eliminarProductos([p.id]); aviso("Producto eliminado"); } catch (e) { fallo(e); }
     },
     agregarIngrediente: () => document.querySelector("#recetas").insertAdjacentHTML("beforeend", filaReceta()),
     quitarFila: (d, btn) => btn.closest(".fila-receta").remove()

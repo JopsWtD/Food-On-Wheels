@@ -70,23 +70,36 @@ export async function eliminarProductos(ids) { // por lotes (un writeBatch admit
 // Id único que nunca se repite, para que los pedidos antiguos no muestren otro producto con el mismo id
 export const nuevoId = (lista) => Math.max(Date.now(), ...lista.map((x) => x.id + 1));
 
-/* Primera entrada de un admin: sube los datos base que falten y migra formatos anteriores */
+/* Al entrar un admin: sube los datos base que falten y migra formatos anteriores.
+   Cada paso va por separado y solo escribe si hace falta: si uno falla, los demás siguen,
+   y el error dice qué paso falló (antes un solo fallo detenía todo y se repetía en cada inicio de sesión). */
 export async function prepararDatos() {
-  const b = writeBatch(db); let cambios = 0;
-  if (!(await getDoc(doc(db, "config", "tienda"))).exists()) { b.set(doc(db, "config", "tienda"), TIENDA_BASE); cambios++; }
-  if (!(await getDoc(doc(db, "config", "promos"))).exists()) { b.set(doc(db, "config", "promos"), { lista: PROMOCIONES_BASE }); cambios++; }
-  if ((await getDocs(query(collection(db, "inventario"), limit(1)))).empty) { inventarioBase().forEach((i, k) => b.set(doc(collection(db, "inventario")), { ...i, orden: k })); cambios++; }
-  b.delete(doc(db, "config", "puntos")); // los puntos de venta se eliminaron del sistema
-  await b.commit();
+  const existe = async (ruta) => (await getDoc(doc(db, ...ruta))).exists();
+  const pasos = [
+    ["datos del negocio", async () => !(await existe(["config", "tienda"])) && (await setDoc(doc(db, "config", "tienda"), TIENDA_BASE), true)],
+    ["promociones", async () => !(await existe(["config", "promos"])) && (await setDoc(doc(db, "config", "promos"), { lista: PROMOCIONES_BASE }), true)],
+    ["inventario", async () => {
+      if (!(await getDocs(query(collection(db, "inventario"), limit(1)))).empty) return false;
+      const b = writeBatch(db); inventarioBase().forEach((i, k) => b.set(doc(collection(db, "inventario")), { ...i, orden: k }));
+      await b.commit(); return true;
+    }],
+    ["puntos de venta", async () => (await existe(["config", "puntos"])) && (await deleteDoc(doc(db, "config", "puntos")), false)], // se eliminaron del sistema
+    ["categorías y productos", migrarCatalogo]
+  ];
+  // Todas las verificaciones van en paralelo (antes iban una tras otra y sumaban varios segundos)
+  const resultados = await Promise.allSettled(pasos.map(([, paso]) => paso()));
+  const cambios = resultados.some((r) => r.status === "fulfilled" && r.value);
+  const fallos = resultados.map((r, k) => ({ nombre: pasos[k][0], e: r.reason })).filter((x, k) => resultados[k].status === "rejected");
+  fallos.forEach(({ nombre, e }) => console.error(`Preparación de datos — ${nombre}:`, e));
   if (cambios) aviso("Configuración inicial cargada");
-  await migrarCatalogo();
+  if (fallos.length) throw Object.assign(new Error("preparacion"), { code: fallos[0].e?.code, pasos: fallos.map((f) => f.nombre) });
 }
 // Productos de versiones anteriores: categoría como texto → categoriaId; combos con receta → incluye;
 // y se quitan los campos que ya no se usan (calificación y tiempo).
 async function migrarCatalogo() {
   const prods = (await getDocs(collection(db, "productos"))).docs;
   const viejos = prods.filter((d) => { const p = d.data(); return (p.categoria !== undefined) || p.rating !== undefined || p.minutos !== undefined || (p.categoria === "Combos" && p.tipo !== "combo"); });
-  if (!viejos.length) return;
+  if (!viejos.length) return false;
   const cats = (await getDocs(collection(db, "categorias"))).docs.map((d) => ({ id: d.id, ...d.data() }));
   const b = writeBatch(db);
   let orden = cats.length;
@@ -103,6 +116,7 @@ async function migrarCatalogo() {
   });
   await b.commit();
   aviso("Catálogo actualizado al formato nuevo");
+  return true;
 }
 export const guardarTienda = (datos) => setDoc(doc(db, "config", "tienda"), datos, { merge: true });
 export const borrar = (col, id) => deleteDoc(doc(db, col, String(id)));

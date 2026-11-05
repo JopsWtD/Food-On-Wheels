@@ -46,12 +46,12 @@ export default {
     nuevo: () => editar(-1), editar: (d) => editar(+d.k),
     async ajustar(d) {
       const i = INVENTARIO[+d.k], nuevo = Math.max(0, Math.round((i.s + +d.d) * 1000) / 1000);
-      try { await updateDoc(doc(db, "inventario", i._id), { s: nuevo }); await registrar(i.n, nuevo - i.s, "Ajuste manual"); } catch { fallo(); }
+      try { await updateDoc(doc(db, "inventario", i._id), { s: nuevo }); await registrar(i.n, nuevo - i.s, "Ajuste manual"); } catch (e) { fallo(e); }
     },
     async eliminar(d) {
       const i = INVENTARIO[+d.k];
       if (!confirm(`¿Eliminar «${i.n}»? También se quitará de las recetas.`)) return;
-      try { await actualizarRecetas((r) => r.filter(([x]) => x !== i.n), (b) => b.delete(doc(db, "inventario", i._id))); aviso("Insumo eliminado"); } catch { fallo(); }
+      try { await actualizarRecetas((r) => r.filter(([x]) => x !== i.n), (b) => b.delete(doc(db, "inventario", i._id))); aviso("Insumo eliminado"); } catch (e) { fallo(e); }
     }
   }
 };

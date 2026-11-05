@@ -3,7 +3,13 @@ import { $, esc, IMG, redimensionar } from "../../shared/util.js";
 import { ESTADOS, etiquetaAdmin } from "../../shared/dominio.js";
 
 export function aviso(m) { const a = $("#aviso"); a.textContent = m; a.classList.add("ver"); clearTimeout(aviso.t); aviso.t = setTimeout(() => a.classList.remove("ver"), 2400); }
-export const fallo = () => aviso("No se pudo guardar. Revisa tu conexión o tus permisos.");
+// Traduce el error de Firestore a un mensaje útil (antes todo decía "revisa tu conexión")
+export function mensajeError(err) {
+  if (err?.code === "permission-denied") return "Firestore rechazó el cambio por permisos. ¿Publicaste las reglas nuevas (firestore.rules)?";
+  if (err?.code === "unavailable" || !navigator.onLine) return "Sin conexión a internet. Intenta de nuevo.";
+  return err?.message && !err.code ? err.message : "No se pudo guardar." + (err?.code ? ` (${err.code})` : "");
+}
+export const fallo = (err) => { console.error(err); aviso(mensajeError(err)); };
 
 export const kpi = (ico, color, titulo, valor, prefijo = "") => `<article class="kpi"><span class="ico ${color}">${ico}</span><div><p>${titulo}</p><b data-n="${valor}" data-f="${prefijo}">0</b></div></article>`;
 export const tabla = (cab, filas, vacio = "Sin resultados") => `<div class="tabla"><table><thead><tr>${cab.map((c) => `<th>${c}</th>`).join("")}</tr></thead><tbody>${filas.join("") || `<tr><td colspan="${cab.length}" class="vacio">${vacio}</td></tr>`}</tbody></table></div>`;
@@ -19,7 +25,7 @@ export function editor(titulo, html, guardar, textoBoton = "Guardar") {
   f.innerHTML = `<h2>${titulo}</h2>${html}<p class="error" id="errDlg" role="alert"></p><div class="acciones"><button class="btn gris" type="button" data-x>Volver</button><button class="btn" type="submit">${textoBoton}</button></div>`;
   f.onsubmit = async (e) => {
     e.preventDefault(); const btn = f.querySelector("[type=submit]"); btn.disabled = true;
-    let r; try { r = await guardar(new FormData(f)); } catch (err) { console.error(err); r = "No se pudo guardar. Revisa tu conexión."; }
+    let r; try { r = await guardar(new FormData(f)); } catch (err) { console.error(err); r = mensajeError(err); }
     btn.disabled = false;
     if (r === true) { $("#dlg").close(); aviso("Listo"); } else $("#errDlg").textContent = r || "No se pudo guardar.";
   };

@@ -26,7 +26,7 @@ export default {
     const fd = new FormData(form), file = fd.get("img"); let imagen = BANNER.imagen;
     if (file && file.size) { try { imagen = await redimensionar(file, 1200, .8); } catch { return aviso("No se pudo leer la imagen."); } } else if (fd.get("quitar")) imagen = "";
     if (imagen.length > IMG.MAX) return aviso("La imagen es muy pesada. Usa una más pequeña.");
-    try { await setDoc(doc(db, "config", "banner"), { etiqueta: fd.get("etiqueta"), titulo: fd.get("titulo"), texto: fd.get("texto"), boton: fd.get("boton"), emoji: fd.get("emoji") || "🍛", imagen }); aviso("Banner actualizado"); } catch { fallo(); }
+    try { await setDoc(doc(db, "config", "banner"), { etiqueta: fd.get("etiqueta"), titulo: fd.get("titulo"), texto: fd.get("texto"), boton: fd.get("boton"), emoji: fd.get("emoji") || "🍛", imagen }); aviso("Banner actualizado"); } catch (e) { fallo(e); }
   },
   acciones: {
     restablecer: () => { if (confirm("¿Volver al banner original?")) deleteDoc(doc(db, "config", "banner")).catch(fallo); },

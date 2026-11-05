@@ -232,3 +232,9 @@ td.det .repo{color:var(--verde2)}td.det .cancel{color:#b3261e}
 .estrella{margin-bottom:12px;padding:10px 14px;border-radius:12px;background:#fff1cc;color:#8a5a00}
 .nota-item{color:var(--verde2)}
 td.ajuste button:disabled{opacity:.35;cursor:not-allowed}
+
+/* Pantalla de carga mientras se recupera la sesión */
+.cargando{position:fixed;inset:0;z-index:100;display:grid;place-content:center;justify-items:center;gap:10px;background:var(--crema,#fbf8f1);color:var(--verde);font-weight:700}
+.cargando span{font-size:3rem;animation:avanza 1.2s ease-in-out infinite alternate}
+.cargando[hidden]{display:none}
+@keyframes avanza{from{transform:translateX(-24px)}to{transform:translateX(24px)}}

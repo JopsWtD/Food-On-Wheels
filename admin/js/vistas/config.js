@@ -28,7 +28,7 @@ export default {
   },
   async alEnviar(form) {
     const fd = new FormData(form);
-    try { await guardarTienda({ nombre: fd.get("nombre").trim(), nit: fd.get("nit").trim(), direccion: fd.get("direccion").trim(), telefono: fd.get("telefono").trim(), costoEnvio: +fd.get("costoEnvio"), primeDescuento: +fd.get("primeDescuento") }); aviso("Datos guardados"); } catch { fallo(); }
+    try { await guardarTienda({ nombre: fd.get("nombre").trim(), nit: fd.get("nit").trim(), direccion: fd.get("direccion").trim(), telefono: fd.get("telefono").trim(), costoEnvio: +fd.get("costoEnvio"), primeDescuento: +fd.get("primeDescuento") }); aviso("Datos guardados"); } catch (e) { fallo(e); }
   },
   acciones: {
     salir: () => signOut(auth),
@@ -40,11 +40,11 @@ export default {
         b.delete(doc(db, "contadores", "pedidos")); b.delete(doc(db, "stats", "popularidad"));
         INVENTARIO.forEach((i) => { const x = base.find((y) => y.n === i.n); if (x && i._id) b.update(doc(db, "inventario", i._id), { s: x.s }); });
         await b.commit(); aviso("Datos reiniciados");
-      } catch { fallo(); }
+      } catch (e) { fallo(e); }
     },
     async borrarCatalogo() {
       if (!confirm(`Se eliminarán los ${PRODUCTOS.length} productos y combos del menú. Los pedidos antiguos se conservan. ¿Continuar?`)) return;
-      try { await eliminarProductos(PRODUCTOS.map((p) => p.id)); aviso("Productos y combos eliminados"); } catch { fallo(); }
+      try { await eliminarProductos(PRODUCTOS.map((p) => p.id)); aviso("Productos y combos eliminados"); } catch (e) { fallo(e); }
     }
   }
 };
