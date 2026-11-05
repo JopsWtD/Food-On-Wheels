@@ -225,3 +225,10 @@ td.det .repo{color:var(--verde2)}td.det .cancel{color:#b3261e}
   .tabla td .control-estado{justify-items:end}.botones-estado{justify-content:flex-end}
 }
 .separado{display:block;font-size:.75rem;color:var(--gris)}
+
+/* ===== Secciones nuevas: categorías, facturas, configuración ===== */
+.vacio-caja{text-align:center;padding:40px 24px}.vacio-caja p{margin:8px auto 18px;max-width:420px;color:var(--gris)}
+.peligro{border:1px solid #f0c4bf}.peligro h2{color:#b3261e}
+.estrella{margin-bottom:12px;padding:10px 14px;border-radius:12px;background:#fff1cc;color:#8a5a00}
+.nota-item{color:var(--verde2)}
+td.ajuste button:disabled{opacity:.35;cursor:not-allowed}

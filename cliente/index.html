@@ -49,14 +49,14 @@
       <p class="menu-info" id="infoResultados"></p>
     </div>
     <nav class="categorias" id="categorias" aria-label="Categorías"></nav>
-    <div class="grilla" id="grilla"></div>
+    <div id="secciones" aria-live="polite"></div>
   </section>
 
   <section class="prime" id="prime">
     <span class="prime-corona" aria-hidden="true">👑</span>
     <div>
       <h2>FoW Prime</h2>
-      <p>Tendrás un 25% de descuento en compras con tu membresía.</p>
+      <p id="textoPrime">Tendrás un 25% de descuento en compras con tu membresía.</p>
     </div>
     <button class="btn btn-blanco" id="btnPrime" type="button">Quiero mi membresía</button>
   </section>
@@ -81,8 +81,9 @@
     <dl class="totales">
       <div><dt>Subtotal</dt><dd id="tSub">$0</dd></div>
       <div id="filaPrime" hidden><dt>Descuento Prime (25%)</dt><dd id="tPrime">$0</dd></div>
-      <div class="total"><dt>Total estimado</dt><dd id="tTotal">$0</dd></div>
+      <div class="total"><dt>Total</dt><dd id="tTotal">$0</dd></div>
     </dl>
+    <p class="nota-envio" id="notaEnvio"></p>
     <button class="btn btn-naranja btn-ancho" id="btnContinuar" type="button">Continuar</button>
   </footer>
 </aside>
@@ -162,6 +163,7 @@
     </label>
     <label id="lblDireccion">Dirección de entrega<input name="direccion" placeholder="Calle 72 # 12-34, Apto 201"></label>
     <label>Indicaciones adicionales (opcional)<input name="notas" placeholder="Ej. Llamar al portero"></label>
+    <dl class="totales resumen-pedido" id="resumenPedido"></dl>
     <p class="nota">Esta es una solicitud de pedido, no una confirmación. Nos pondremos en contacto contigo para coordinar los detalles.</p>
     <div class="acciones">
       <button class="btn btn-gris" type="button" data-cerrar>Volver</button>
@@ -190,11 +192,14 @@
 </dialog>
 
 <!-- Ventana para cancelar un pedido o reportar un problema -->
+<!-- Detalle de producto -->
+<dialog id="dlgProducto" class="hoja"></dialog>
+
 <dialog id="dlgGen"><form id="formGen" class="form"></form></dialog>
 
 <div class="aviso" id="aviso" role="status" aria-live="polite"></div>
 
 
-<script type="module" src="js/cliente.js"></script>
+<script type="module" src="js/app.js"></script>
 </body>
 </html>

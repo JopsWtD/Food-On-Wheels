@@ -6,9 +6,32 @@ service cloud.firestore {
 
     function logueado() { return request.auth != null; }
     function soyYo(uid) { return logueado() && request.auth.uid == uid; }
+    function pedido(pid) { return get(/databases/$(database)/documents/pedidos/$(pid)).data; }
     // Es admin quien tiene un documento con su uid en la colección "admins" (se crea a mano en la consola).
     function esAdmin() { return logueado() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
     function noBloqueado() { return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.bloqueado == false; }
+    function cambia() { return request.resource.data.diff(resource.data).affectedKeys(); }
+
+    // Paso siguiente de un pedido según su tipo de entrega (recoger no tiene "en camino")
+    function siguiente(entrega, estado) {
+      return (entrega == 'recoger'
+        ? {'pendiente': 'en preparación', 'en preparación': 'listo', 'listo': 'entregado', 'en camino': 'entregado'}
+        : {'pendiente': 'en preparación', 'en preparación': 'listo', 'listo': 'en camino', 'en camino': 'entregado'}
+      ).get(estado, 'ninguno');
+    }
+    // El admin solo puede avanzar un paso o cancelar; un pedido entregado o cancelado ya no cambia de estado.
+    function cambioDeEstadoValido() {
+      let antes = resource.data.estado;
+      let despues = request.resource.data.estado;
+      return despues == antes
+          || despues == siguiente(resource.data.entrega, antes)
+          || (despues == 'cancelado' && !(antes in ['entregado', 'cancelado']));
+    }
+    // El id del pedido debe ser el consecutivo que se acaba de reservar en la misma transacción
+    function idConsecutivo(id) {
+      return request.resource.data.id == getAfter(/databases/$(database)/documents/contadores/pedidos).data.n
+          && id == string(request.resource.data.id);
+    }
 
     match /admins/{uid} {
       allow read: if soyYo(uid);   // cada quien solo puede comprobar si él mismo es admin
@@ -21,18 +44,50 @@ service cloud.firestore {
                     && request.resource.data.bloqueado == false
                     && request.resource.data.correo == request.auth.token.email;
       // El cliente edita sus datos y su carrito, pero NO puede desbloquearse ni cambiar su correo.
-      allow update: if esAdmin()
-                    || (soyYo(uid) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['bloqueado', 'correo']));
+      allow update: if esAdmin() || (soyYo(uid) && !cambia().hasAny(['bloqueado', 'correo']));
       allow delete: if esAdmin();
+    }
+
+    // Contador de pedidos: solo puede subir de 1 en 1
+    match /contadores/{c} {
+      allow read: if logueado();
+      allow create: if logueado() && request.resource.data.n == 1;
+      allow update: if logueado() && request.resource.data.n == resource.data.n + 1;
+      allow delete: if esAdmin();   // al reiniciar los datos de prueba
     }
 
     match /pedidos/{id} {
       allow read: if esAdmin() || (logueado() && resource.data.uid == request.auth.uid);
+      allow create: if logueado() && idConsecutivo(id)
+                    && request.resource.data.estado == 'pendiente'
+                    && request.resource.data.get('descontado', false) == false
+                    && (
+                      // pedido normal del cliente
+                      (request.resource.data.uid == request.auth.uid && noBloqueado() && !('reposicionDe' in request.resource.data))
+                      // reposición sin costo creada por el admin al aprobar un reclamo
+                      || (esAdmin() && 'reposicionDe' in request.resource.data)
+                    );
+      allow update: if (esAdmin() && cambioDeEstadoValido())
+                    // el cliente solo puede cancelar su pedido mientras está pendiente
+                    || (logueado() && resource.data.uid == request.auth.uid
+                        && resource.data.estado == 'pendiente'
+                        && request.resource.data.estado == 'cancelado'
+                        && request.resource.data.canceladoPor == 'cliente'
+                        && cambia().hasOnly(['estado', 'motivoCancelacion', 'canceladoPor', 'tiempos']));
+      allow delete: if esAdmin();
+    }
+
+    // Reclamos: uno por pedido, solo de pedidos propios entregados hace menos de 24 horas
+    match /reclamos/{pid} {
+      allow read: if esAdmin() || (logueado() && resource.data.uid == request.auth.uid);
       allow create: if logueado()
                     && request.resource.data.uid == request.auth.uid
-                    && request.resource.data.estado == 'pendiente'
-                    && noBloqueado();
-      allow update, delete: if esAdmin();   // solo el admin cambia estados
+                    && request.resource.data.estado == 'abierto'
+                    && pid == string(request.resource.data.pedidoId)
+                    && pedido(pid).uid == request.auth.uid
+                    && pedido(pid).estado == 'entregado'
+                    && request.time.toMillis() - pedido(pid).tiempos.entregado < 86400000;
+      allow update, delete: if esAdmin();
     }
 
     match /membresias/{id} {
@@ -42,7 +97,13 @@ service cloud.firestore {
 
     // Catálogo: lo ve cualquiera (también visitantes), solo el admin lo modifica.
     match /productos/{id}  { allow read: if true; allow write: if esAdmin(); }
+    match /categorias/{id} { allow read: if true; allow write: if esAdmin(); }
+    // Imagen grande de cada producto (la miniatura va dentro del producto)
+    match /imagenes/{id}   { allow read: if true; allow write: if esAdmin(); }
+    // Unidades vendidas por producto: alimenta «Los más pedidos» del cliente
+    match /stats/{id}      { allow read: if true; allow write: if esAdmin(); }
     match /inventario/{id} { allow read: if true; allow write: if esAdmin(); }
+    // config/tienda (datos del negocio, envío y Prime), config/banner y config/promos
     match /config/{id}     { allow read: if true; allow write: if esAdmin(); }
 
     match /historial/{id}  { allow read, write: if esAdmin(); }
